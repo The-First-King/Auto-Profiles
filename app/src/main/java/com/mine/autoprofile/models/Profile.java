@@ -1,75 +1,31 @@
 package com.mine.autoprofile.models;
 
+import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
-import java.util.UUID;
-
 @Entity(tableName = "profiles")
 public class Profile {
+    @PrimaryKey(autoGenerate = true)
+    private long id;
 
-    @PrimaryKey
-    private String id;
-    
+    @NonNull
     private String name;
-    private String description;
-    private long createdAt;
-    private long updatedAt;
-    private boolean isActive;
 
-    public Profile() {
-        this.id = UUID.randomUUID().toString();
-        this.createdAt = System.currentTimeMillis();
-        this.updatedAt = System.currentTimeMillis();
-        this.isActive = false;
-    }
+    private boolean isDefault;
 
-    public Profile(String name, String description) {
-        this();
+    public Profile(@NonNull String name, boolean isDefault) {
         this.name = name;
-        this.description = description;
+        this.isDefault = isDefault;
     }
 
-    public String getId() {
-        return id;
-    }
+    public long getId() { return id; }
+    public void setId(long id) { this.id = id; }
 
-    public void setId(String id) {
-        this.id = id;
-    }
+    @NonNull
+    public String getName() { return name; }
+    public void setName(@NonNull String name) { this.name = name; }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-        this.updatedAt = System.currentTimeMillis();
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-        this.updatedAt = System.currentTimeMillis();
-    }
-
-    public long getCreatedAt() {
-        return createdAt;
-    }
-
-    public long getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public boolean isActive() {
-        return isActive;
-    }
-
-    public void setActive(boolean active) {
-        isActive = active;
-        this.updatedAt = System.currentTimeMillis();
-    }
+    public boolean isDefault() { return isDefault; }
+    public void setDefault(boolean aDefault) { isDefault = aDefault; }
 }
