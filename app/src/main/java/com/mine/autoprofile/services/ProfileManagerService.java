@@ -1,49 +1,34 @@
 package com.mine.autoprofile.services;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
-
-import androidx.annotation.Nullable;
-
-import java.util.UUID;
+import android.util.Log;
+import java.lang.reflect.Method;
 
 public class ProfileManagerService extends Service {
-
     private static final String TAG = "ProfileManagerService";
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        initializeNotificationChannel();
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        return START_STICKY;
-    }
-
-    @Nullable
     @Override
     public IBinder onBind(Intent intent) {
         return null;
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-    }
+    public static void switchProfile(Context context, String profileName) {
+        try {
+            Class<?> profileManagerClass = Class.forName("lineageos.app.ProfileManager");
+            Method getInstanceMethod = profileManagerClass.getMethod("getInstance", Context.class);
+            Object profileManagerInstance = getInstanceMethod.invoke(null, context);
 
-    private void initializeNotificationChannel() {
-        // TODO: Create notification channel for Android 8.0+
-    }
-
-    public void activateProfile(UUID profileUuid) {
-        // TODO: Call LineageOS ProfileManager API
-    }
-
-    public UUID getActiveProfile() {
-        // TODO: Call LineageOS ProfileManager API
-        return null;
+            if (profileManagerInstance != null) {
+                // Compatible with LineageOS profile string configurations via reflection
+                Method setActiveProfileMethod = profileManagerClass.getMethod("setActiveProfile", String.class);
+                setActiveProfileMethod.invoke(profileManagerInstance, profileName);
+                Log.d(TAG, "Successfully switched LineageOS profile to: " + profileName);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "LineageOS ProfileManager reflection failed. Are you running LineageOS?", e);
+        }
     }
 }
