@@ -1,95 +1,32 @@
 package com.mine.autoprofile.models;
 
 import androidx.room.Entity;
-import androidx.room.ForeignKey;
 import androidx.room.PrimaryKey;
 
-import java.util.UUID;
-
-@Entity(
-    tableName = "rules",
-    foreignKeys = @ForeignKey(
-        entity = Profile.class,
-        parentColumns = "id",
-        childColumns = "profileId",
-        onDelete = ForeignKey.CASCADE
-    )
-)
+@Entity(tableName = "rules")
 public class Rule {
+    @PrimaryKey(autoGenerate = true)
+    private long id;
 
-    @PrimaryKey
-    private String id;
-    
-    private String name;
-    private String profileId;
-    private boolean isEnabled;
-    private int priority;
-    private long createdAt;
-    private long updatedAt;
+    private long profileId;
+    private long triggerId;
+    private boolean enabled;
 
-    public Rule() {
-        this.id = UUID.randomUUID().toString();
-        this.isEnabled = true;
-        this.priority = 0;
-        this.createdAt = System.currentTimeMillis();
-        this.updatedAt = System.currentTimeMillis();
-    }
-
-    public Rule(String name, String profileId) {
-        this();
-        this.name = name;
+    public Rule(long profileId, long triggerId, boolean enabled) {
         this.profileId = profileId;
+        this.triggerId = triggerId;
+        this.enabled = enabled;
     }
 
-    public String getId() {
-        return id;
-    }
+    public long getId() { return id; }
+    public void setId(long id) { this.id = id; }
 
-    public void setId(String id) {
-        this.id = id;
-    }
+    public long getProfileId() { return profileId; }
+    public void setProfileId(long profileId) { this.profileId = profileId; }
 
-    public String getName() {
-        return name;
-    }
+    public long getTriggerId() { return triggerId; }
+    public void setTriggerId(long triggerId) { this.triggerId = triggerId; }
 
-    public void setName(String name) {
-        this.name = name;
-        this.updatedAt = System.currentTimeMillis();
-    }
-
-    public String getProfileId() {
-        return profileId;
-    }
-
-    public void setProfileId(String profileId) {
-        this.profileId = profileId;
-        this.updatedAt = System.currentTimeMillis();
-    }
-
-    public boolean isEnabled() {
-        return isEnabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        isEnabled = enabled;
-        this.updatedAt = System.currentTimeMillis();
-    }
-
-    public int getPriority() {
-        return priority;
-    }
-
-    public void setPriority(int priority) {
-        this.priority = priority;
-        this.updatedAt = System.currentTimeMillis();
-    }
-
-    public long getCreatedAt() {
-        return createdAt;
-    }
-
-    public long getUpdatedAt() {
-        return updatedAt;
-    }
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
 }
