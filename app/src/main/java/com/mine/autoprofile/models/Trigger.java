@@ -1,80 +1,33 @@
 package com.mine.autoprofile.models;
 
+import androidx.annotation.NonNull;
 import androidx.room.Entity;
-import androidx.room.ForeignKey;
 import androidx.room.PrimaryKey;
 
-import java.util.UUID;
-
-@Entity(
-    tableName = "triggers",
-    foreignKeys = @ForeignKey(
-        entity = Rule.class,
-        parentColumns = "id",
-        childColumns = "ruleId",
-        onDelete = ForeignKey.CASCADE
-    )
-)
+@Entity(tableName = "triggers")
 public class Trigger {
+    @PrimaryKey(autoGenerate = true)
+    private long id;
 
-    public static final int TYPE_TIME = 1;
-    public static final int TYPE_CELL_TOWER = 2;
-    public static final int TYPE_CALENDAR = 3;
-    public static final int TYPE_RECURRING = 4;
+    @NonNull
+    private String type; // e.g., "CELL_TOWER", "TIME"
 
-    @PrimaryKey
-    private String id;
-    
-    private String ruleId;
-    private int type;
-    private String triggerData;
-    private long createdAt;
+    @NonNull
+    private String value; // e.g., cell id or time string
 
-    public Trigger() {
-        this.id = UUID.randomUUID().toString();
-        this.createdAt = System.currentTimeMillis();
-    }
-
-    public Trigger(String ruleId, int type, String triggerData) {
-        this();
-        this.ruleId = ruleId;
+    public Trigger(@NonNull String type, @NonNull String value) {
         this.type = type;
-        this.triggerData = triggerData;
+        this.value = value;
     }
 
-    public String getId() {
-        return id;
-    }
+    public long getId() { return id; }
+    public void setId(long id) { this.id = id; }
 
-    public void setId(String id) {
-        this.id = id;
-    }
+    @NonNull
+    public String getType() { return type; }
+    public void setType(@NonNull String type) { this.type = type; }
 
-    public String getRuleId() {
-        return ruleId;
-    }
-
-    public void setRuleId(String ruleId) {
-        this.ruleId = ruleId;
-    }
-
-    public int getType() {
-        return type;
-    }
-
-    public void setType(int type) {
-        this.type = type;
-    }
-
-    public String getTriggerData() {
-        return triggerData;
-    }
-
-    public void setTriggerData(String triggerData) {
-        this.triggerData = triggerData;
-    }
-
-    public long getCreatedAt() {
-        return createdAt;
-    }
+    @NonNull
+    public String getValue() { return value; }
+    public void setValue(@NonNull String value) { this.value = value; }
 }
