@@ -1,0 +1,85 @@
+<resources>
+    <string name="app_name">Auto Profiles</string>
+    
+    <!-- Main UI Strings -->
+    <string name="welcome_text">Manage your device profiles automatically</string>
+    <string name="profiles_tab">Profiles</string>
+    <string name="rules_tab">Rules</string>
+    <string name="settings_tab">Settings</string>
+    
+    <!-- Profile Management -->
+    <string name="add_profile">Add Profile</string>
+    <string name="edit_profile">Edit Profile</string>
+    <string name="delete_profile">Delete Profile</string>
+    <string name="profile_name">Profile Name</string>
+    <string name="profile_description">Description</string>
+    <string name="no_profiles">No profiles yet. Create one to get started!</string>
+    
+    <!-- Rules and Triggers -->
+    <string name="add_rule">Add Rule</string>
+    <string name="edit_rule">Edit Rule</string>
+    <string name="delete_rule">Delete Rule</string>
+    <string name="rule_name">Rule Name</string>
+    <string name="trigger_type">Trigger Type</string>
+    <string name="trigger_time">Time-based</string>
+    <string name="trigger_cell_tower">Cell Tower</string>
+    <string name="trigger_calendar">Calendar Event</string>
+    <string name="trigger_recurring">Recurring</string>
+    <string name="select_profile">Select Profile</string>
+    <string name="no_rules">No rules configured. Add a rule to automate profile switching!</string>
+    
+    <!-- Time-based Trigger -->
+    <string name="time_label">Time</string>
+    <string name="days_of_week">Days of Week</string>
+    <string name="monday">Monday</string>
+    <string name="tuesday">Tuesday</string>
+    <string name="wednesday">Wednesday</string>
+    <string name="thursday">Thursday</string>
+    <string name="friday">Friday</string>
+    <string name="saturday">Saturday</string>
+    <string name="sunday">Sunday</string>
+    
+    <!-- Cell Tower Trigger -->
+    <string name="cell_tower_list">Cell Towers</string>
+    <string name="add_cell_tower">Add Cell Tower</string>
+    <string name="tower_id">Tower ID</string>
+    <string name="tower_name">Tower Name</string>
+    <string name="current_tower">Current Tower: %1$s</string>
+    
+    <!-- Calendar Trigger -->
+    <string name="calendar_event">Calendar Event</string>
+    <string name="select_calendar">Select Calendar</string>
+    <string name="event_name">Event Name</string>
+    
+    <!-- General Actions -->
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="enable">Enable</string>
+    <string name="disable">Disable</string>
+    <string name="enabled">Enabled</string>
+    <string name="disabled">Disabled</string>
+    <string name="app_enabled">App Enabled</string>
+    <string name="app_disabled">App Disabled</string>
+    
+    <!-- Notifications -->
+    <string name="profile_activated">Profile Activated: %1$s</string>
+    <string name="profile_activation_failed">Failed to activate profile</string>
+    <string name="channel_name">Auto Profiles Notifications</string>
+    <string name="channel_description">Notifications about profile changes</string>
+    
+    <!-- Settings -->
+    <string name="enable_notifications">Enable Notifications</string>
+    <string name="vibrate_on_change">Vibrate on Profile Change</string>
+    <string name="battery_optimization_warning">Battery Optimization may prevent this app from working</string>
+    <string name="disable_battery_optimization">Disable Battery Optimization</string>
+    
+    <!-- Errors and Messages -->
+    <string name="error_profile_name_empty">Profile name cannot be empty</string>
+    <string name="error_no_trigger">Please add at least one trigger</string>
+    <string name="error_lineage_not_available">LineageOS Profiles not available on this device</string>
+    <string name="success_profile_created">Profile created successfully</string>
+    <string name="success_profile_updated">Profile updated successfully</string>
+    <string name="success_rule_created">Rule created successfully</string>
+    <string name="success_rule_updated">Rule updated successfully</string>
+</resources>
