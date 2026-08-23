@@ -24,6 +24,12 @@ jobs:
       - name: Grant execute permission for gradlew 
         run: chmod +x gradlew 
 
+      - name: Run Unit Tests
+        run: ./gradlew test --no-daemon
+
+      - name: Run Android Tests
+        run: ./gradlew connectedAndroidTest --no-daemon
+
       - name: Build Debug APK 
         run: ./gradlew assembleDebug --no-daemon 
 
@@ -32,3 +38,11 @@ jobs:
         with: 
           name: app-debug-apk-from-cloud 
           path: app/build/outputs/apk/debug/*.apk
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: app/build/reports/androidTests/
+
