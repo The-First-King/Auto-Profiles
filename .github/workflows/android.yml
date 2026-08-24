@@ -20,9 +20,13 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
 
-      - name: Build Debug APK with Global Gradle
+      - name: Setup Gradle 8.7
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
+      - name: Build Debug APK with Gradle
         run: gradle assembleDebug --warning-mode all
 
       - name: Upload Debug APK Artifact
