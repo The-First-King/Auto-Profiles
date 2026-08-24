@@ -25,10 +25,19 @@ android {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+
+    // This resolves the duplicate META-INF file error during the build
+    packagingOptions {
+        exclude 'META-INF/androidx.lifecycle_lifecycle-livedata-core.version'
+    }
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    // Grab all JARs EXCEPT the LineageOS SDK
+    implementation fileTree(dir: 'libs', include: ['*.jar'], exclude: ['org.lineageos.platform.jar'])
+    
+    // Add the LineageOS SDK strictly for compilation
+    compileOnly files('libs/org.lineageos.platform.jar')
 
     // AndroidX
     implementation 'androidx.appcompat:appcompat:1.6.1'
