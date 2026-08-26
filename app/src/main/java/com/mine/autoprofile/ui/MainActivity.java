@@ -65,19 +65,17 @@ public class MainActivity extends AppCompatActivity {
             ruleAdapter = new RuleAdapter(new RuleAdapter.OnRuleClickListener() {
                 @Override
                 public void onToggleRule(FullRule rule, boolean isChecked) {
-                    // We will implement DB updates for toggling later
-                    Toast.makeText(MainActivity.this, "Toggled: " + isChecked, Toast.SHORT).show();
+                    Toast.makeText(MainActivity.this, "Toggled: " + isChecked, Toast.LENGTH_SHORT).show();
                 }
 
                 @Override
                 public void onEditRule(FullRule rule) {
-                    Toast.makeText(MainActivity.this, "Edit coming soon", Toast.SHORT).show();
+                    Toast.makeText(MainActivity.this, "Edit coming soon", Toast.LENGTH_SHORT).show();
                 }
 
                 @Override
                 public void onDeleteRule(FullRule rule) {
-                    // We will implement deletion later
-                    Toast.makeText(MainActivity.this, "Delete coming soon", Toast.SHORT).show();
+                    Toast.makeText(MainActivity.this, "Delete coming soon", Toast.LENGTH_SHORT).show();
                 }
             });
             recyclerView.setAdapter(ruleAdapter);
@@ -187,7 +185,6 @@ public class MainActivity extends AppCompatActivity {
                     AppDatabase db = AppDatabase.getInstance(MainActivity.this);
                     long profileId = -1;
                     
-                    // Assuming you have a getAllProfiles() or similar in your DAO
                     try {
                         List<Profile> existingProfiles = db.profileDao().getAllProfiles();
                         for (Profile p : existingProfiles) {
@@ -197,9 +194,9 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
                         
-                        // If it doesn't exist in our DB yet, create it
+                        // If it doesn't exist in our DB yet, create it with matching constructor parameters
                         if (profileId == -1) {
-                            Profile newProfile = new Profile(profileName);
+                            Profile newProfile = new Profile(profileName, true);
                             profileId = db.profileDao().insert(newProfile);
                         }
                     } catch (Exception e) {
