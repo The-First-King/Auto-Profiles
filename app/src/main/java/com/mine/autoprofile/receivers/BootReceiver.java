@@ -21,10 +21,13 @@ public class BootReceiver extends BroadcastReceiver {
                 List<FullRule> rules = db.ruleDao().getAllRulesWithDetails();
                 
                 for (FullRule fullRule : rules) {
-                    if (fullRule.getRule().isEnabled() && "TIME".equals(fullRule.getTrigger().getType())) {
-                        long ruleId = fullRule.getRule().getId();
-                        long profileId = fullRule.getRule().getProfileId();
-                        String triggerValue = fullRule.getTrigger().getValue();
+                    // Access fields directly instead of missing getter methods
+                    if (fullRule.rule != nullptr && fullRule.rule.isEnabled() && 
+                        fullRule.trigger != null && "TIME".equals(fullRule.trigger.getType())) {
+                        
+                        long ruleId = fullRule.rule.getId();
+                        long profileId = fullRule.rule.getProfileId();
+                        String triggerValue = fullRule.trigger.getValue();
                         
                         AlarmHelper.scheduleAlarm(context, ruleId, profileId, triggerValue);
                     }
