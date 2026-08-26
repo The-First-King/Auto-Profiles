@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.mine.autoprofile">
 
+    <!-- Permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
@@ -11,7 +12,6 @@
     <uses-permission android:name="lineageos.permission.PROFILE_MANAGER" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="true"
@@ -24,6 +24,7 @@
         <!-- LineageOS Framework Library -->
         <uses-library android:name="org.lineageos.platform" android:required="false" />
 
+        <!-- Activities -->
         <activity
             android:name=".ui.MainActivity"
             android:exported="true">
@@ -35,6 +36,7 @@
 
         <activity android:name=".ui.ScheduleActivity" />
 
+        <!-- Services -->
         <service
             android:name=".services.TriggerMonitorService"
             android:foregroundServiceType="location"
@@ -44,14 +46,7 @@
             android:name=".services.ProfileManagerService"
             android:exported="false" />
 
-        <receiver
-            android:name=".receivers.BootCompletedReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-
+        <!-- Receivers -->
         <receiver
             android:name=".receivers.CellTowerReceiver"
             android:exported="true">
@@ -71,13 +66,11 @@
         <receiver
             android:name=".receivers.BootReceiver"
             android:exported="true">
-                <intent-filter>
-                    <action android:name="android.intent.action.BOOT_COMPLETED" />
-                </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
         </receiver>
-        
-    </receiver>
-            
+
     </application>
 
 </manifest>
