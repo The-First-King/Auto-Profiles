@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/white">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Set Schedule"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp"/>
+
+    <!-- Time Pickers -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="24dp">
+
+        <Button
+            android:id="@+id/btn_start_time"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Start: 08:00"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/btn_end_time"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="End: 17:00"
+            android:layout_marginStart="8dp"/>
+    </LinearLayout>
+
+    <!-- Days of the Week -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Repeat on days:"
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp"/>
+
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:columnCount="4"
+        android:layout_marginBottom="32dp">
+
+        <CheckBox android:id="@+id/chk_mon" android:text="Mon" />
+        <CheckBox android:id="@+id/chk_tue" android:text="Tue" />
+        <CheckBox android:id="@+id/chk_wed" android:text="Wed" />
+        <CheckBox android:id="@+id/chk_thu" android:text="Thu" />
+        <CheckBox android:id="@+id/chk_fri" android:text="Fri" />
+        <CheckBox android:id="@+id/chk_sat" android:text="Sat" />
+        <CheckBox android:id="@+id/chk_sun" android:text="Sun" />
+    </GridLayout>
+
+    <Button
+        android:id="@+id/btn_save_rule"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="Save Rule"
+        android:textSize="18sp"
+        android:backgroundTint="@color/colorPrimary" />
+
+</LinearLayout>
