@@ -7,16 +7,25 @@ import android.util.Log;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.mine.autoprofile.R;
+import com.mine.autoprofile.database.AppDatabase;
+import com.mine.autoprofile.models.FullRule;
+import com.mine.autoprofile.models.Profile;
 import com.mine.autoprofile.services.TriggerMonitorService;
 import java.lang.reflect.Method;
+import java.util.List;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
     private Object mProfileManagerInstance = null;
     private Class<?> mProfileManagerClass = null;
     private Class<?> mProfileClass = null;
+
+    private RuleAdapter ruleAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,9 +39,61 @@ public class MainActivity extends AppCompatActivity {
         // Initialize the LineageOS Profile Manager via Reflection & DexClassLoader
         initProfileManager();
 
+        // Initialize the RecyclerView for displaying saved rules
+        setupRecyclerView();
+
         // Find the FAB and set its click listener
         FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(v -> showProfileSelectionDialog());
+        if (fab != null) {
+            fab.setOnClickListener(v -> showProfileSelectionDialog());
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Refresh the list of rules every time we return to this screen
+        loadRulesFromDatabase();
+    }
+
+    private void setupRecyclerView() {
+        RecyclerView recyclerView = findViewById(R.id.recycler_view);
+        if (recyclerView != null) {
+            recyclerView.setLayoutManager(new LinearLayoutManager(this));
+            
+            // Pass the interface listener we created in RuleAdapter
+            ruleAdapter = new RuleAdapter(new RuleAdapter.OnRuleClickListener() {
+                @Override
+                public void onToggleRule(FullRule rule, boolean isChecked) {
+                    // We will implement DB updates for toggling later
+                    Toast.makeText(MainActivity.this, "Toggled: " + isChecked, Toast.SHORT).show();
+                }
+
+                @Override
+                public void onEditRule(FullRule rule) {
+                    Toast.makeText(MainActivity.this, "Edit coming soon", Toast.SHORT).show();
+                }
+
+                @Override
+                public void onDeleteRule(FullRule rule) {
+                    // We will implement deletion later
+                    Toast.makeText(MainActivity.this, "Delete coming soon", Toast.SHORT).show();
+                }
+            });
+            recyclerView.setAdapter(ruleAdapter);
+        }
+    }
+
+    private void loadRulesFromDatabase() {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            AppDatabase db = AppDatabase.getInstance(this);
+            List<FullRule> rules = db.ruleDao().getAllRulesWithDetails();
+            runOnUiThread(() -> {
+                if (ruleAdapter != null) {
+                    ruleAdapter.setRules(rules);
+                }
+            });
+        });
     }
 
     private void initProfileManager() {
@@ -104,8 +165,7 @@ public class MainActivity extends AppCompatActivity {
                     .setTitle("Select LineageOS Profile")
                     .setItems(profileNames, (dialog, which) -> {
                         String selectedProfileName = profileNames[which];
-                        // TODO: Navigate to a "Create Rule" screen passing the selected profile UUID/Name
-                        Toast.makeText(this, "Selected: " + selectedProfileName, Toast.LENGTH_SHORT).show();
+                        promptForTriggerType(selectedProfileName);
                     })
                     .setNegativeButton("Cancel", null)
                     .show();
@@ -114,5 +174,49 @@ public class MainActivity extends AppCompatActivity {
             Log.e("AutoProfile", "Error accessing LineageOS profiles", e);
             Toast.makeText(this, "Failed to load profiles. Check logs.", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void promptForTriggerType(String profileName) {
+        new AlertDialog.Builder(MainActivity.this)
+            .setTitle("Create Rule")
+            .setMessage("How should '" + profileName + "' be triggered?")
+            .setPositiveButton("Schedule", (dialog, which) -> {
+                
+                // Fetch or Create the profile in our local Room DB before launching ScheduleActivity
+                Executors.newSingleThreadExecutor().execute(() -> {
+                    AppDatabase db = AppDatabase.getInstance(MainActivity.this);
+                    long profileId = -1;
+                    
+                    // Assuming you have a getAllProfiles() or similar in your DAO
+                    try {
+                        List<Profile> existingProfiles = db.profileDao().getAllProfiles();
+                        for (Profile p : existingProfiles) {
+                            if (p.getName() != null && p.getName().equals(profileName)) {
+                                profileId = p.getId();
+                                break;
+                            }
+                        }
+                        
+                        // If it doesn't exist in our DB yet, create it
+                        if (profileId == -1) {
+                            Profile newProfile = new Profile(profileName);
+                            profileId = db.profileDao().insert(newProfile);
+                        }
+                    } catch (Exception e) {
+                        Log.e("AutoProfile", "DB Error checking profile", e);
+                    }
+
+                    long finalProfileId = profileId;
+                    runOnUiThread(() -> {
+                        Intent intent = new Intent(MainActivity.this, ScheduleActivity.class);
+                        intent.putExtra("PROFILE_ID", finalProfileId);
+                        startActivity(intent);
+                    });
+                });
+            })
+            .setNegativeButton("Location (GSM)", (dialog, which) -> {
+                Toast.makeText(MainActivity.this, "GSM Scanner coming soon!", Toast.LENGTH_SHORT).show();
+            })
+            .show();
     }
 }
