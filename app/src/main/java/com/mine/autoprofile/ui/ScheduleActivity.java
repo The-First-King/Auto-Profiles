@@ -10,6 +10,7 @@ import com.mine.autoprofile.R;
 import com.mine.autoprofile.database.AppDatabase;
 import com.mine.autoprofile.models.Rule;
 import com.mine.autoprofile.models.Trigger;
+import com.mine.autoprofile.utils.AlarmHelper; // Ensure this matches your AlarmHelper package path
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -62,22 +63,31 @@ public class ScheduleActivity extends AppCompatActivity {
         if (((CheckBox) findViewById(R.id.chk_fri)).isChecked()) days.add("6");
         if (((CheckBox) findViewById(R.id.chk_sat)).isChecked()) days.add("7");
 
+        if (days.isEmpty()) {
+            Toast.makeText(this, "Please select at least one day", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String triggerValue = startTime + "-" + endTime + "|" + String.join(",", days);
 
         Executors.newSingleThreadExecutor().execute(() -> {
             AppDatabase db = AppDatabase.getInstance(this);
             
-            // Insert Trigger and get generated ID
+            // 1. Insert Trigger and get generated ID
             Trigger trigger = new Trigger("TIME", triggerValue);
             long triggerId = db.triggerDao().insert(trigger);
 
-            // Insert Rule mapping
+            // 2. Insert Rule mapping and capture the generated ruleId
             Rule rule = new Rule(profileId, triggerId, true);
-            db.ruleDao().insert(rule);
+            long ruleId = db.ruleDao().insert(rule);
 
+            // 3. Register the alarm using AlarmHelper
+            AlarmHelper.scheduleAlarm(ScheduleActivity.this, ruleId, profileId, triggerValue);
+
+            // 4. Return to main screen on the UI thread
             runOnUiThread(() -> {
-                Toast.makeText(this, "Rule Saved!", Toast.LENGTH_SHORT).show();
-                finish(); // Close activity and return to main screen
+                Toast.makeText(this, "Rule Saved & Alarm Set!", Toast.LENGTH_SHORT).show();
+                finish(); 
             });
         });
     }
