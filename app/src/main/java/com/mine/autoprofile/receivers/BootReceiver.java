@@ -21,8 +21,8 @@ public class BootReceiver extends BroadcastReceiver {
                 List<FullRule> rules = db.ruleDao().getAllRulesWithDetails();
                 
                 for (FullRule fullRule : rules) {
-                    // Access fields directly instead of missing getter methods
-                    if (fullRule.rule != nullptr && fullRule.rule.isEnabled() && 
+                    // Changed nullptr to standard Java null
+                    if (fullRule.rule != null && fullRule.rule.isEnabled() && 
                         fullRule.trigger != null && "TIME".equals(fullRule.trigger.getType())) {
                         
                         long ruleId = fullRule.rule.getId();
