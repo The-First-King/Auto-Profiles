@@ -19,6 +19,8 @@ import com.mine.autoprofile.database.AppDatabase;
 import com.mine.autoprofile.models.FullRule;
 import com.mine.autoprofile.models.Profile;
 import com.mine.autoprofile.services.TriggerMonitorService;
+import com.mine.autoprofile.utils.AlarmHelper;
+import com.mine.autoprofile.utils.ProfileSwitcher;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -62,6 +64,21 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         // Refresh the list of rules every time we return to this screen
         loadRulesFromDatabase();
+        // Re-register alarms for all enabled TIME rules. Installing a new APK over
+        // the old one CANCELS all previously set alarms, and BootReceiver only
+        // restores them after a reboot. This makes opening the app enough.
+        // Idempotent: same request codes + FLAG_UPDATE_CURRENT just replace the
+        // existing PendingIntents.
+        Executors.newSingleThreadExecutor().execute(() -> {
+            AppDatabase db = AppDatabase.getInstance(this);
+            for (FullRule fullRule : db.ruleDao().getAllRulesWithDetails()) {
+                if (fullRule.rule != null && fullRule.rule.isEnabled()
+                        && fullRule.trigger != null && "TIME".equals(fullRule.trigger.getType())) {
+                    AlarmHelper.scheduleAlarm(this, fullRule.rule.getId(),
+                            fullRule.rule.getProfileId(), fullRule.trigger.getValue());
+                }
+            }
+        });
     }
 
     private void setupRecyclerView() {
@@ -78,7 +95,25 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onEditRule(FullRule rule) {
-                    Toast.makeText(MainActivity.this, "Edit coming soon", Toast.LENGTH_SHORT).show();
+                    // Temporary diagnostic: test the profile switch directly, without alarms.
+                    String name = rule.profile != null ? rule.profile.getName() : null;
+                    if (name == null) {
+                        Toast.makeText(MainActivity.this, "Rule has no profile", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("Test rule")
+                            .setMessage("Apply profile '" + name + "' right now?")
+                            .setPositiveButton("Apply now", (d, w) ->
+                                    Executors.newSingleThreadExecutor().execute(() -> {
+                                        boolean ok = ProfileSwitcher.switchTo(MainActivity.this, name);
+                                        runOnUiThread(() -> Toast.makeText(MainActivity.this,
+                                                ok ? "Switched to '" + name + "' (verified)"
+                                                   : "Switch FAILED - check logcat tag AutoProfile",
+                                                Toast.LENGTH_LONG).show());
+                                    }))
+                            .setNegativeButton("Cancel", null)
+                            .show();
                 }
 
                 @Override
