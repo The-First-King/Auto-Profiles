@@ -28,7 +28,13 @@ public class ScheduleReceiver extends BroadcastReceiver {
         Log.i("AutoProfile", "Schedule triggered! isStartEvent: " + isStartEvent);
         SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
 
+        // Keep the process alive until the background work is done. Without this,
+        // onReceive() returns immediately and Android may kill the process before
+        // the executor thread ever touches the database or switches the profile.
+        final PendingResult pendingResult = goAsync();
+
         Executors.newSingleThreadExecutor().execute(() -> {
+            try {
             AppDatabase db = AppDatabase.getInstance(context);
             
             if (isStartEvent) {
@@ -55,9 +61,14 @@ public class ScheduleReceiver extends BroadcastReceiver {
                 }
             }
 
-            // Reschedule this rule for the next week
+            // Reschedule this rule for the next occurrence.
+            // allowImmediateStart = false: at this instant "now" is inside the window,
+            // so an immediate-start check here would re-fire the START event in a loop.
             if (triggerValue != null) {
-                AlarmHelper.scheduleAlarm(context, ruleId, profileId, triggerValue);
+                AlarmHelper.scheduleAlarm(context, ruleId, profileId, triggerValue, false);
+            }
+            } finally {
+                pendingResult.finish();
             }
         });
     }
