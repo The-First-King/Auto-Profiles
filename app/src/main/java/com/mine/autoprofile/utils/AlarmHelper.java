@@ -11,28 +11,59 @@ import java.util.Calendar;
 
 public class AlarmHelper {
 
+    private static final long WEEK_MS = 7L * 24 * 60 * 60 * 1000;
+
+    /**
+     * Entry point used when a rule is created (ScheduleActivity) or restored (BootReceiver).
+     * If "now" already falls inside the rule's time window, the START event fires immediately.
+     */
     public static void scheduleAlarm(Context context, long ruleId, long profileId, String timeString) {
+        scheduleAlarm(context, ruleId, profileId, timeString, true);
+    }
+
+    /**
+     * @param allowImmediateStart pass false when rescheduling from ScheduleReceiver,
+     *                            otherwise the START event would re-fire in a loop.
+     */
+    public static void scheduleAlarm(Context context, long ruleId, long profileId,
+                                     String timeString, boolean allowImmediateStart) {
         // timeString format expected: "08:00-17:00|2,3,4,5,6"
         try {
             String[] parts = timeString.split("\\|");
             if (parts.length < 2) return;
 
             String[] times = parts[0].split("-");
-            String startTimeStr = times[0]; // e.g. "08:00"
-            String endTimeStr = times.length > 1 ? times[1] : null; // e.g. "17:00"
+            int startMinutes = parseMinutes(times[0]);
+            Integer endMinutes = times.length > 1 ? parseMinutes(times[1]) : null;
             String[] daysStr = parts[1].split(",");
 
-            // 1. Schedule Start Alarm (Request Code: ruleId * 2)
-            long nextStartTime = calculateNextTriggerTime(startTimeStr, daysStr);
-            if (nextStartTime != -1) {
-                setExactAlarm(context, (int) ruleId * 2, ruleId, profileId, timeString, nextStartTime, true);
+            long now = System.currentTimeMillis();
+
+            // Duration of the window; handles intervals that cross midnight (e.g. 22:00-06:00)
+            long durationMs = 0;
+            if (endMinutes != null) {
+                durationMs = ((endMinutes - startMinutes + 24 * 60) % (24 * 60)) * 60_000L;
             }
 
-            // 2. Schedule End Alarm (Request Code: ruleId * 2 + 1)
-            if (endTimeStr != null) {
-                long nextEndTime = calculateNextTriggerTime(endTimeStr, daysStr);
-                if (nextEndTime != -1) {
-                    setExactAlarm(context, (int) ruleId * 2 + 1, ruleId, profileId, timeString, nextEndTime, false);
+            // 1. START alarm (Request Code: ruleId * 2)
+            long nextStartTime;
+            if (allowImmediateStart && durationMs > 0
+                    && isWithinInterval(now, startMinutes, durationMs, daysStr)) {
+                // The user saved a rule whose window is active right now -> apply it immediately
+                nextStartTime = now + 1500;
+            } else {
+                nextStartTime = calculateNextOccurrence(now, startMinutes, daysStr);
+            }
+            if (nextStartTime > 0) {
+                setAlarm(context, (int) ruleId * 2, ruleId, profileId, timeString, nextStartTime, true);
+            }
+
+            // 2. END alarm (Request Code: ruleId * 2 + 1), anchored to the start occurrence
+            //    so that midnight-crossing windows revert on the correct day.
+            if (endMinutes != null && durationMs > 0) {
+                long nextEndTime = calculateNextEnd(now, startMinutes, durationMs, daysStr);
+                if (nextEndTime > 0) {
+                    setAlarm(context, (int) ruleId * 2 + 1, ruleId, profileId, timeString, nextEndTime, false);
                 }
             }
         } catch (Exception e) {
@@ -40,48 +71,66 @@ public class AlarmHelper {
         }
     }
 
-    private static long calculateNextTriggerTime(String timeStr, String[] daysStr) {
-        String[] timeParts = timeStr.split(":");
-        int targetHour = Integer.parseInt(timeParts[0]);
-        int targetMinute = Integer.parseInt(timeParts[1]);
-
-        Calendar calendar = Calendar.getInstance();
-        long currentTime = calendar.getTimeInMillis();
-        long nextTriggerTime = -1;
-
-        for (String dayStr : daysStr) {
-            int targetDayOfWeek = Integer.parseInt(dayStr.trim());
-            Calendar tempCalendar = Calendar.getInstance();
-            tempCalendar.set(Calendar.HOUR_OF_DAY, targetHour);
-            tempCalendar.set(Calendar.MINUTE, targetMinute);
-            tempCalendar.set(Calendar.SECOND, 0);
-            tempCalendar.set(Calendar.MILLISECOND, 0);
-
-            int currentDayOfWeek = tempCalendar.get(Calendar.DAY_OF_WEEK);
-            int dayDifference = targetDayOfWeek - currentDayOfWeek;
-            
-            if (dayDifference < 0 || (dayDifference == 0 && tempCalendar.getTimeInMillis() <= currentTime)) {
-                dayDifference += 7; // Move to next week
-            }
-            
-            tempCalendar.add(Calendar.DAY_OF_MONTH, dayDifference);
-
-            if (nextTriggerTime == -1 || tempCalendar.getTimeInMillis() < nextTriggerTime) {
-                nextTriggerTime = tempCalendar.getTimeInMillis();
-            }
-        }
-        return nextTriggerTime;
+    private static int parseMinutes(String hhmm) {
+        String[] p = hhmm.trim().split(":");
+        return Integer.parseInt(p[0].trim()) * 60 + Integer.parseInt(p[1].trim());
     }
 
-    private static void setExactAlarm(Context context, int requestCode, long ruleId, long profileId, String timeString, long triggerTime, boolean isStart) {
+    /** Next occurrence of the given clock time on any of the given days, strictly after 'now'. */
+    private static long calculateNextOccurrence(long now, int minutesOfDay, String[] daysStr) {
+        long best = -1;
+        for (String dayStr : daysStr) {
+            long t = occurrenceAfter(now, minutesOfDay, Integer.parseInt(dayStr.trim()));
+            if (best == -1 || t < best) best = t;
+        }
+        return best;
+    }
+
+    /** Next occurrence of clock time on the given DAY_OF_WEEK, strictly after 'now'. */
+    private static long occurrenceAfter(long now, int minutesOfDay, int targetDayOfWeek) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(now);
+        c.set(Calendar.HOUR_OF_DAY, minutesOfDay / 60);
+        c.set(Calendar.MINUTE, minutesOfDay % 60);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+
+        int diff = targetDayOfWeek - c.get(Calendar.DAY_OF_WEEK);
+        if (diff < 0 || (diff == 0 && c.getTimeInMillis() <= now)) {
+            diff += 7;
+        }
+        c.add(Calendar.DAY_OF_MONTH, diff);
+        return c.getTimeInMillis();
+    }
+
+    /** True if 'now' is inside [start, start + duration) for any selected day. */
+    private static boolean isWithinInterval(long now, int startMinutes, long durationMs, String[] daysStr) {
+        for (String dayStr : daysStr) {
+            long nextStart = occurrenceAfter(now, startMinutes, Integer.parseInt(dayStr.trim()));
+            long lastStart = nextStart - WEEK_MS; // most recent past occurrence on that day
+            if (now >= lastStart && now < lastStart + durationMs) return true;
+        }
+        return false;
+    }
+
+    /** Earliest end-of-window moment after 'now', considering windows already in progress. */
+    private static long calculateNextEnd(long now, int startMinutes, long durationMs, String[] daysStr) {
+        long best = -1;
+        for (String dayStr : daysStr) {
+            long nextStart = occurrenceAfter(now, startMinutes, Integer.parseInt(dayStr.trim()));
+            long lastStart = nextStart - WEEK_MS;
+            long candidate = (lastStart + durationMs > now)
+                    ? lastStart + durationMs   // window in progress -> revert at its real end
+                    : nextStart + durationMs;  // otherwise end of the next window
+            if (best == -1 || candidate < best) best = candidate;
+        }
+        return best;
+    }
+
+    private static void setAlarm(Context context, int requestCode, long ruleId, long profileId,
+                                 String timeString, long triggerTime, boolean isStart) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (alarmManager == null) return;
-
-        // Android 12+ requires explicit permission check for Exact Alarms
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
-            Log.e("AutoProfile", "Exact alarm permission missing! App will fail to trigger schedules.");
-            return;
-        }
 
         Intent intent = new Intent(context, ScheduleReceiver.class);
         intent.putExtra("RULE_ID", ruleId);
@@ -93,7 +142,19 @@ public class AlarmHelper {
                 context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
-        Log.i("AutoProfile", "Scheduled " + (isStart ? "START" : "END") + " alarm for rule " + ruleId + " at " + triggerTime);
+        boolean exactAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+                || alarmManager.canScheduleExactAlarms();
+
+        if (exactAllowed) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+        } else {
+            // Android 12+ denied "Alarms & reminders": don't silently drop the alarm,
+            // fall back to a windowed (inexact) alarm so the rule still works, just less precisely.
+            alarmManager.setWindow(AlarmManager.RTC_WAKEUP, triggerTime, 10 * 60 * 1000L, pendingIntent);
+            Log.w("AutoProfile", "Exact alarm permission missing - scheduled INEXACT alarm instead. "
+                    + "Ask the user to enable 'Alarms & reminders' for precise switching.");
+        }
+        Log.i("AutoProfile", "Scheduled " + (isStart ? "START" : "END")
+                + " alarm for rule " + ruleId + " at " + triggerTime + " (exact=" + exactAllowed + ")");
     }
 }
