@@ -48,8 +48,11 @@ public class AlarmHelper {
             // 1. START alarm (Request Code: ruleId * 2)
             long nextStartTime;
             if (allowImmediateStart && durationMs > 0
-                    && isWithinInterval(now, startMinutes, durationMs, daysStr)) {
-                // The user saved a rule whose window is active right now -> apply it immediately
+                    && isWithinInterval(now, startMinutes, durationMs, daysStr)
+                    && !hasRevertSaved(context, ruleId)) {
+                // The user saved a rule whose window is active right now -> apply it
+                // immediately. hasRevertSaved() prevents a second immediate fire when
+                // alarms are re-registered (app open / app update) mid-window.
                 nextStartTime = now + 1500;
             } else {
                 nextStartTime = calculateNextOccurrence(now, startMinutes, daysStr);
@@ -69,6 +72,11 @@ public class AlarmHelper {
         } catch (Exception e) {
             Log.e("AutoProfile", "Error parsing schedule string", e);
         }
+    }
+
+    private static boolean hasRevertSaved(Context context, long ruleId) {
+        return context.getSharedPreferences(ProfileSwitcher.PREF_NAME, Context.MODE_PRIVATE)
+                .contains(ProfileSwitcher.REVERT_KEY_PREFIX + ruleId);
     }
 
     private static int parseMinutes(String hhmm) {
