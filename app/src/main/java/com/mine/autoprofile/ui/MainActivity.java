@@ -1,8 +1,12 @@
 package com.mine.autoprofile.ui;
 
+import android.app.AlarmManager;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
@@ -38,6 +42,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialize the LineageOS Profile Manager via Reflection & DexClassLoader
         initProfileManager();
+
+        // On Android 14 (targetSdk 34) SCHEDULE_EXACT_ALARM is DENIED by default.
+        // Without it, schedule rules never fire precisely (or, previously, at all).
+        ensureExactAlarmPermission();
 
         // Initialize the RecyclerView for displaying saved rules
         setupRecyclerView();
@@ -92,6 +100,26 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         });
+    }
+
+    private void ensureExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return;
+
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        if (alarmManager == null || alarmManager.canScheduleExactAlarms()) return;
+
+        new AlertDialog.Builder(this)
+                .setTitle("Permission needed")
+                .setMessage("Auto Profiles needs the \"Alarms & reminders\" permission to switch "
+                        + "profiles at the exact scheduled time. Without it, switching may be "
+                        + "delayed by several minutes.")
+                .setPositiveButton("Open Settings", (dialog, which) -> {
+                    Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                            Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                })
+                .setNegativeButton("Later", null)
+                .show();
     }
 
     private void initProfileManager() {
