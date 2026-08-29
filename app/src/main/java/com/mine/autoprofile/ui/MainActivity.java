@@ -40,6 +40,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // The layout has its own green title bar (app_bar_container). Hide the
+        // system ActionBar so the title is never shown twice, regardless of
+        // which theme the build ends up applying.
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
+
         // Start background monitoring service when app opens
         Intent serviceIntent = new Intent(this, TriggerMonitorService.class);
         startService(serviceIntent);
