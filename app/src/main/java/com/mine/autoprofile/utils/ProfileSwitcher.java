@@ -14,9 +14,21 @@ public final class ProfileSwitcher {
 
     public static final String PREF_NAME = "AutoProfilePrefs";
     public static final String REVERT_KEY_PREFIX = "revert_profile_rule_";
+    public static final String MASTER_ENABLED_KEY = "master_enabled";
     private static final String TAG = "AutoProfile";
 
     private ProfileSwitcher() {}
+
+    /** Soft kill switch: when false the whole app is inert (no alarms, no switching). */
+    public static boolean isMasterEnabled(Context context) {
+        return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+                .getBoolean(MASTER_ENABLED_KEY, true);
+    }
+
+    public static void setMasterEnabled(Context context, boolean enabled) {
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+                .edit().putBoolean(MASTER_ENABLED_KEY, enabled).apply();
+    }
 
     /**
      * If this rule's time window is currently applied (a revert profile is saved),
