@@ -3,6 +3,7 @@ package com.mine.autoprofile.database;
 import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
+import androidx.room.Update;
 import com.mine.autoprofile.models.Trigger;
 import java.util.List;
 
@@ -13,4 +14,10 @@ public interface TriggerDao {
 
     @Insert
     long insert(Trigger trigger);
+
+    @Update
+    void update(Trigger trigger);
+
+    @Query("DELETE FROM triggers WHERE id = :triggerId")
+    void deleteById(long triggerId);
 }
