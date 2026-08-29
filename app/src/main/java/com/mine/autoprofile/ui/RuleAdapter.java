@@ -58,9 +58,8 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
             holder.ruleProfile.setText("Applies to: Unknown Profile");
         }
 
-        // 3. Set Trigger Info
-        String triggerDetails = "Trigger: " + fullRule.trigger.getValue();
-        holder.ruleTriggerInfo.setText(triggerDetails);
+        // 3. Set Trigger Info (human readable for TIME triggers)
+        holder.ruleTriggerInfo.setText(formatTrigger(fullRule));
 
         // 4. Set Switch State
         // Remove listener temporarily so we don't trigger it while recycling views
@@ -79,6 +78,25 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
         holder.btnDelete.setOnClickListener(v -> {
             if (listener != null) listener.onDeleteRule(fullRule);
         });
+    }
+
+    /** Turns "08:00-17:00|2,3,4,5,6" into "08:00-17:00 on Mon, Tue, Wed, Thu, Fri". */
+    private static String formatTrigger(FullRule fullRule) {
+        if (fullRule.trigger == null) return "Trigger: ?";
+        String value = fullRule.trigger.getValue();
+        if (!"TIME".equals(fullRule.trigger.getType())) return "Trigger: " + value;
+        try {
+            String[] parts = value.split("\\|");
+            String[] dayNames = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+            StringBuilder days = new StringBuilder();
+            for (String d : parts[1].split(",")) {
+                if (days.length() > 0) days.append(", ");
+                days.append(dayNames[Integer.parseInt(d.trim()) - 1]);
+            }
+            return parts[0] + " on " + days;
+        } catch (Exception e) {
+            return "Trigger: " + value;
+        }
     }
 
     @Override
