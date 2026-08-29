@@ -27,6 +27,12 @@ public class AlarmHelper {
      */
     public static void scheduleAlarm(Context context, long ruleId, long profileId,
                                      String timeString, boolean allowImmediateStart) {
+        // Soft kill switch: while OFF, the app must not register any alarms,
+        // regardless of who asks (UI, BootReceiver, ScheduleReceiver reschedule).
+        if (!ProfileSwitcher.isMasterEnabled(context)) {
+            Log.i("AutoProfile", "Master switch OFF - not scheduling alarms for rule " + ruleId);
+            return;
+        }
         // timeString format expected: "08:00-17:00|2,3,4,5,6"
         try {
             String[] parts = timeString.split("\\|");
