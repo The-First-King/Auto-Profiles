@@ -18,6 +18,25 @@ public final class ProfileSwitcher {
 
     private ProfileSwitcher() {}
 
+    /**
+     * If this rule's time window is currently applied (a revert profile is saved),
+     * switch back to that profile and clear the saved state. Called when a rule is
+     * deleted, disabled, or edited mid-window, so the phone isn't left stuck on the
+     * scheduled profile with no END alarm to restore it.
+     */
+    public static void revertIfActive(Context context, long ruleId) {
+        android.content.SharedPreferences prefs =
+                context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        String key = REVERT_KEY_PREFIX + ruleId;
+        String profileToRevert = prefs.getString(key, null);
+        if (profileToRevert != null) {
+            Log.i(TAG, "Rule " + ruleId + " removed/changed mid-window - reverting to '"
+                    + profileToRevert + "'");
+            switchTo(context, profileToRevert);
+            prefs.edit().remove(key).apply();
+        }
+    }
+
     public static String getActiveProfileName(Context context) {
         try {
             Object[] lineage = getLineageClasses(context);
