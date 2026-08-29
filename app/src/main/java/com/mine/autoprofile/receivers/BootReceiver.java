@@ -16,6 +16,10 @@ public class BootReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)
                 || Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
+            if (!com.mine.autoprofile.utils.ProfileSwitcher.isMasterEnabled(context)) {
+                Log.i("AutoProfile", "Master switch OFF - not restoring alarms after: " + action);
+                return;
+            }
             Log.i("AutoProfile", "Restoring scheduled alarms after: " + action);
             
             Executors.newSingleThreadExecutor().execute(() -> {
