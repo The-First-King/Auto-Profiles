@@ -74,6 +74,21 @@ public class AlarmHelper {
         }
     }
 
+    /** Cancels both the START and END alarms of a rule (used by delete/disable/edit). */
+    public static void cancelAlarms(Context context, long ruleId) {
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (alarmManager == null) return;
+        for (int requestCode : new int[]{(int) ruleId * 2, (int) ruleId * 2 + 1}) {
+            Intent intent = new Intent(context, ScheduleReceiver.class);
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                    context, requestCode, intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            alarmManager.cancel(pendingIntent);
+            pendingIntent.cancel();
+        }
+        Log.i("AutoProfile", "Cancelled alarms for rule " + ruleId);
+    }
+
     private static boolean hasRevertSaved(Context context, long ruleId) {
         return context.getSharedPreferences(ProfileSwitcher.PREF_NAME, Context.MODE_PRIVATE)
                 .contains(ProfileSwitcher.REVERT_KEY_PREFIX + ruleId);
