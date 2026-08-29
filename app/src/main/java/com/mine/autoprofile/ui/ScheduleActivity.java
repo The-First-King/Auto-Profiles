@@ -37,6 +37,11 @@ public class ScheduleActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_schedule);
 
+        // The layout has its own heading; hide any system ActionBar.
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
+
         profileId = getIntent().getLongExtra("PROFILE_ID", -1);
         editRuleId = getIntent().getLongExtra("RULE_ID", -1);
         editTriggerId = getIntent().getLongExtra("TRIGGER_ID", -1);
