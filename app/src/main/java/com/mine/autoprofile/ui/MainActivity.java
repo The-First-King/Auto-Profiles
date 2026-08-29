@@ -8,7 +8,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -52,6 +54,9 @@ public class MainActivity extends AppCompatActivity {
         // Initialize the RecyclerView for displaying saved rules
         setupRecyclerView();
 
+        // Master toggle in the green app bar: soft kill switch for the whole app
+        setupMasterSwitch();
+
         // Find the FAB and set its click listener
         FloatingActionButton fab = findViewById(R.id.fab);
         if (fab != null) {
@@ -69,6 +74,12 @@ public class MainActivity extends AppCompatActivity {
         // restores them after a reboot. This makes opening the app enough.
         // Idempotent: same request codes + FLAG_UPDATE_CURRENT just replace the
         // existing PendingIntents.
+        registerAllAlarms();
+    }
+
+    /** Registers alarms for every enabled TIME rule (no-op when the master switch is off). */
+    private void registerAllAlarms() {
+        if (!ProfileSwitcher.isMasterEnabled(this)) return;
         Executors.newSingleThreadExecutor().execute(() -> {
             AppDatabase db = AppDatabase.getInstance(this);
             for (FullRule fullRule : db.ruleDao().getAllRulesWithDetails()) {
@@ -77,6 +88,35 @@ public class MainActivity extends AppCompatActivity {
                     AlarmHelper.scheduleAlarm(this, fullRule.rule.getId(),
                             fullRule.rule.getProfileId(), fullRule.trigger.getValue());
                 }
+            }
+        });
+    }
+
+    private void setupMasterSwitch() {
+        SwitchCompat masterSwitch = findViewById(R.id.master_switch);
+        if (masterSwitch == null) return;
+
+        masterSwitch.setChecked(ProfileSwitcher.isMasterEnabled(this));
+
+        masterSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            ProfileSwitcher.setMasterEnabled(this, isChecked);
+            if (isChecked) {
+                // Bring every enabled rule back to life (fires immediately for
+                // rules whose window covers the current time)
+                registerAllAlarms();
+                Toast.makeText(this, R.string.app_enabled, Toast.LENGTH_SHORT).show();
+            } else {
+                // Kill switch: drop all alarms; if any rule is applied right now,
+                // restore the previous profile so the phone isn't left stuck.
+                Executors.newSingleThreadExecutor().execute(() -> {
+                    AppDatabase db = AppDatabase.getInstance(this);
+                    for (FullRule fullRule : db.ruleDao().getAllRulesWithDetails()) {
+                        if (fullRule.rule == null) continue;
+                        AlarmHelper.cancelAlarms(this, fullRule.rule.getId());
+                        ProfileSwitcher.revertIfActive(this, fullRule.rule.getId());
+                    }
+                });
+                Toast.makeText(this, R.string.app_disabled, Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -168,6 +208,11 @@ public class MainActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 if (ruleAdapter != null) {
                     ruleAdapter.setRules(rules);
+                }
+                // Welcome/empty message only when there are no rules yet
+                View emptyState = findViewById(R.id.empty_state);
+                if (emptyState != null) {
+                    emptyState.setVisibility(rules.isEmpty() ? View.VISIBLE : View.GONE);
                 }
             });
         });
