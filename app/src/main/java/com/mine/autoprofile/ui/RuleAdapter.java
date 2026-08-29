@@ -87,11 +87,20 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
         if (!"TIME".equals(fullRule.trigger.getType())) return "Trigger: " + value;
         try {
             String[] parts = value.split("\\|");
-            String[] dayNames = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-            StringBuilder days = new StringBuilder();
+            // Mark which Calendar days (1=Sun ... 7=Sat) are selected
+            boolean[] selected = new boolean[8];
             for (String d : parts[1].split(",")) {
-                if (days.length() > 0) days.append(", ");
-                days.append(dayNames[Integer.parseInt(d.trim()) - 1]);
+                selected[Integer.parseInt(d.trim())] = true;
+            }
+            // Render Monday-first: Mon(2) ... Sat(7), then Sun(1) last
+            String[] dayNames = {"", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+            int[] displayOrder = {2, 3, 4, 5, 6, 7, 1};
+            StringBuilder days = new StringBuilder();
+            for (int day : displayOrder) {
+                if (selected[day]) {
+                    if (days.length() > 0) days.append(", ");
+                    days.append(dayNames[day]);
+                }
             }
             return parts[0] + " on " + days;
         } catch (Exception e) {
