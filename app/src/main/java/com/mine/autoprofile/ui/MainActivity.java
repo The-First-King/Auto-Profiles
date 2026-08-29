@@ -90,35 +90,71 @@ public class MainActivity extends AppCompatActivity {
             ruleAdapter = new RuleAdapter(new RuleAdapter.OnRuleClickListener() {
                 @Override
                 public void onToggleRule(FullRule rule, boolean isChecked) {
-                    Toast.makeText(MainActivity.this, "Toggled: " + isChecked, Toast.LENGTH_SHORT).show();
+                    Executors.newSingleThreadExecutor().execute(() -> {
+                        AppDatabase db = AppDatabase.getInstance(MainActivity.this);
+                        rule.rule.setEnabled(isChecked);
+                        db.ruleDao().update(rule.rule);
+
+                        if (isChecked) {
+                            if (rule.trigger != null && "TIME".equals(rule.trigger.getType())) {
+                                AlarmHelper.scheduleAlarm(MainActivity.this, rule.rule.getId(),
+                                        rule.rule.getProfileId(), rule.trigger.getValue());
+                            }
+                        } else {
+                            AlarmHelper.cancelAlarms(MainActivity.this, rule.rule.getId());
+                            // If the rule's window is applied right now, restore the
+                            // previous profile instead of leaving the phone stuck.
+                            ProfileSwitcher.revertIfActive(MainActivity.this, rule.rule.getId());
+                        }
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this,
+                                isChecked ? "Rule enabled" : "Rule disabled",
+                                Toast.LENGTH_SHORT).show());
+                    });
                 }
 
                 @Override
                 public void onEditRule(FullRule rule) {
-                    // Temporary diagnostic: test the profile switch directly, without alarms.
-                    String name = rule.profile != null ? rule.profile.getName() : null;
-                    if (name == null) {
-                        Toast.makeText(MainActivity.this, "Rule has no profile", Toast.LENGTH_SHORT).show();
+                    if (rule.trigger == null || !"TIME".equals(rule.trigger.getType())) {
+                        Toast.makeText(MainActivity.this,
+                                "Only schedule rules can be edited for now", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    new AlertDialog.Builder(MainActivity.this)
-                            .setTitle("Test rule")
-                            .setMessage("Apply profile '" + name + "' right now?")
-                            .setPositiveButton("Apply now", (d, w) ->
-                                    Executors.newSingleThreadExecutor().execute(() -> {
-                                        boolean ok = ProfileSwitcher.switchTo(MainActivity.this, name);
-                                        runOnUiThread(() -> Toast.makeText(MainActivity.this,
-                                                ok ? "Switched to '" + name + "' (verified)"
-                                                   : "Switch FAILED - check logcat tag AutoProfile",
-                                                Toast.LENGTH_LONG).show());
-                                    }))
-                            .setNegativeButton("Cancel", null)
-                            .show();
+                    Intent intent = new Intent(MainActivity.this, ScheduleActivity.class);
+                    intent.putExtra("PROFILE_ID", rule.rule.getProfileId());
+                    intent.putExtra("RULE_ID", rule.rule.getId());
+                    intent.putExtra("TRIGGER_ID", rule.trigger.getId());
+                    intent.putExtra("TRIGGER_VALUE", rule.trigger.getValue());
+                    startActivity(intent);
                 }
 
                 @Override
                 public void onDeleteRule(FullRule rule) {
-                    Toast.makeText(MainActivity.this, "Delete coming soon", Toast.LENGTH_SHORT).show();
+                    String profileName = rule.profile != null ? rule.profile.getName() : "?";
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("Delete rule")
+                            .setMessage("Delete rule #" + rule.rule.getId()
+                                    + " for profile '" + profileName + "'?")
+                            .setPositiveButton("Delete", (d, w) ->
+                                    Executors.newSingleThreadExecutor().execute(() -> {
+                                        // 1. Stop future alarms
+                                        AlarmHelper.cancelAlarms(MainActivity.this, rule.rule.getId());
+                                        // 2. If its window is applied right now, revert first
+                                        ProfileSwitcher.revertIfActive(MainActivity.this, rule.rule.getId());
+                                        // 3. Remove from DB (rule + its trigger)
+                                        AppDatabase db = AppDatabase.getInstance(MainActivity.this);
+                                        db.ruleDao().deleteById(rule.rule.getId());
+                                        if (rule.trigger != null) {
+                                            db.triggerDao().deleteById(rule.trigger.getId());
+                                        }
+                                        // 4. Refresh the list
+                                        runOnUiThread(() -> {
+                                            Toast.makeText(MainActivity.this,
+                                                    "Rule deleted", Toast.LENGTH_SHORT).show();
+                                            loadRulesFromDatabase();
+                                        });
+                                    }))
+                            .setNegativeButton("Cancel", null)
+                            .show();
                 }
             });
             recyclerView.setAdapter(ruleAdapter);
