@@ -22,6 +22,12 @@ public class ScheduleReceiver extends BroadcastReceiver {
 
         if (profileId == -1 || ruleId == -1) return;
 
+        // Soft kill switch: ignore stray alarms fired while the app is disabled
+        if (!ProfileSwitcher.isMasterEnabled(context)) {
+            Log.i("AutoProfile", "Master switch OFF - ignoring schedule event for rule " + ruleId);
+            return;
+        }
+
         Log.i("AutoProfile", "Schedule triggered! isStartEvent=" + isStartEvent + " ruleId=" + ruleId);
         SharedPreferences prefs = context.getSharedPreferences(
                 ProfileSwitcher.PREF_NAME, Context.MODE_PRIVATE);
