@@ -8,7 +8,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -19,6 +21,8 @@ import com.mine.autoprofile.database.AppDatabase;
 import com.mine.autoprofile.models.FullRule;
 import com.mine.autoprofile.models.Profile;
 import com.mine.autoprofile.services.TriggerMonitorService;
+import com.mine.autoprofile.utils.AlarmHelper;
+import com.mine.autoprofile.utils.ProfileSwitcher;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -36,6 +40,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // The layout has its own green title bar (app_bar_container). Hide the
+        // system ActionBar so the title is never shown twice, regardless of
+        // which theme the build ends up applying.
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
+
         // Start background monitoring service when app opens
         Intent serviceIntent = new Intent(this, TriggerMonitorService.class);
         startService(serviceIntent);
@@ -50,6 +61,9 @@ public class MainActivity extends AppCompatActivity {
         // Initialize the RecyclerView for displaying saved rules
         setupRecyclerView();
 
+        // Master toggle in the green app bar: soft kill switch for the whole app
+        setupMasterSwitch();
+
         // Find the FAB and set its click listener
         FloatingActionButton fab = findViewById(R.id.fab);
         if (fab != null) {
@@ -62,6 +76,56 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         // Refresh the list of rules every time we return to this screen
         loadRulesFromDatabase();
+        // Re-register alarms for all enabled TIME rules. Installing a new APK over
+        // the old one CANCELS all previously set alarms, and BootReceiver only
+        // restores them after a reboot. This makes opening the app enough.
+        // Idempotent: same request codes + FLAG_UPDATE_CURRENT just replace the
+        // existing PendingIntents.
+        registerAllAlarms();
+    }
+
+    /** Registers alarms for every enabled TIME rule (no-op when the master switch is off). */
+    private void registerAllAlarms() {
+        if (!ProfileSwitcher.isMasterEnabled(this)) return;
+        Executors.newSingleThreadExecutor().execute(() -> {
+            AppDatabase db = AppDatabase.getInstance(this);
+            for (FullRule fullRule : db.ruleDao().getAllRulesWithDetails()) {
+                if (fullRule.rule != null && fullRule.rule.isEnabled()
+                        && fullRule.trigger != null && "TIME".equals(fullRule.trigger.getType())) {
+                    AlarmHelper.scheduleAlarm(this, fullRule.rule.getId(),
+                            fullRule.rule.getProfileId(), fullRule.trigger.getValue());
+                }
+            }
+        });
+    }
+
+    private void setupMasterSwitch() {
+        SwitchCompat masterSwitch = findViewById(R.id.master_switch);
+        if (masterSwitch == null) return;
+
+        masterSwitch.setChecked(ProfileSwitcher.isMasterEnabled(this));
+
+        masterSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            ProfileSwitcher.setMasterEnabled(this, isChecked);
+            if (isChecked) {
+                // Bring every enabled rule back to life (fires immediately for
+                // rules whose window covers the current time)
+                registerAllAlarms();
+                Toast.makeText(this, R.string.app_enabled, Toast.LENGTH_SHORT).show();
+            } else {
+                // Kill switch: drop all alarms; if any rule is applied right now,
+                // restore the previous profile so the phone isn't left stuck.
+                Executors.newSingleThreadExecutor().execute(() -> {
+                    AppDatabase db = AppDatabase.getInstance(this);
+                    for (FullRule fullRule : db.ruleDao().getAllRulesWithDetails()) {
+                        if (fullRule.rule == null) continue;
+                        AlarmHelper.cancelAlarms(this, fullRule.rule.getId());
+                        ProfileSwitcher.revertIfActive(this, fullRule.rule.getId());
+                    }
+                });
+                Toast.makeText(this, R.string.app_disabled, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void setupRecyclerView() {
@@ -73,17 +137,71 @@ public class MainActivity extends AppCompatActivity {
             ruleAdapter = new RuleAdapter(new RuleAdapter.OnRuleClickListener() {
                 @Override
                 public void onToggleRule(FullRule rule, boolean isChecked) {
-                    Toast.makeText(MainActivity.this, "Toggled: " + isChecked, Toast.LENGTH_SHORT).show();
+                    Executors.newSingleThreadExecutor().execute(() -> {
+                        AppDatabase db = AppDatabase.getInstance(MainActivity.this);
+                        rule.rule.setEnabled(isChecked);
+                        db.ruleDao().update(rule.rule);
+
+                        if (isChecked) {
+                            if (rule.trigger != null && "TIME".equals(rule.trigger.getType())) {
+                                AlarmHelper.scheduleAlarm(MainActivity.this, rule.rule.getId(),
+                                        rule.rule.getProfileId(), rule.trigger.getValue());
+                            }
+                        } else {
+                            AlarmHelper.cancelAlarms(MainActivity.this, rule.rule.getId());
+                            // If the rule's window is applied right now, restore the
+                            // previous profile instead of leaving the phone stuck.
+                            ProfileSwitcher.revertIfActive(MainActivity.this, rule.rule.getId());
+                        }
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this,
+                                isChecked ? "Rule enabled" : "Rule disabled",
+                                Toast.LENGTH_SHORT).show());
+                    });
                 }
 
                 @Override
                 public void onEditRule(FullRule rule) {
-                    Toast.makeText(MainActivity.this, "Edit coming soon", Toast.LENGTH_SHORT).show();
+                    if (rule.trigger == null || !"TIME".equals(rule.trigger.getType())) {
+                        Toast.makeText(MainActivity.this,
+                                "Only schedule rules can be edited for now", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    Intent intent = new Intent(MainActivity.this, ScheduleActivity.class);
+                    intent.putExtra("PROFILE_ID", rule.rule.getProfileId());
+                    intent.putExtra("RULE_ID", rule.rule.getId());
+                    intent.putExtra("TRIGGER_ID", rule.trigger.getId());
+                    intent.putExtra("TRIGGER_VALUE", rule.trigger.getValue());
+                    startActivity(intent);
                 }
 
                 @Override
                 public void onDeleteRule(FullRule rule) {
-                    Toast.makeText(MainActivity.this, "Delete coming soon", Toast.LENGTH_SHORT).show();
+                    String profileName = rule.profile != null ? rule.profile.getName() : "?";
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("Delete rule")
+                            .setMessage("Delete rule #" + rule.rule.getId()
+                                    + " for profile '" + profileName + "'?")
+                            .setPositiveButton("Delete", (d, w) ->
+                                    Executors.newSingleThreadExecutor().execute(() -> {
+                                        // 1. Stop future alarms
+                                        AlarmHelper.cancelAlarms(MainActivity.this, rule.rule.getId());
+                                        // 2. If its window is applied right now, revert first
+                                        ProfileSwitcher.revertIfActive(MainActivity.this, rule.rule.getId());
+                                        // 3. Remove from DB (rule + its trigger)
+                                        AppDatabase db = AppDatabase.getInstance(MainActivity.this);
+                                        db.ruleDao().deleteById(rule.rule.getId());
+                                        if (rule.trigger != null) {
+                                            db.triggerDao().deleteById(rule.trigger.getId());
+                                        }
+                                        // 4. Refresh the list
+                                        runOnUiThread(() -> {
+                                            Toast.makeText(MainActivity.this,
+                                                    "Rule deleted", Toast.LENGTH_SHORT).show();
+                                            loadRulesFromDatabase();
+                                        });
+                                    }))
+                            .setNegativeButton("Cancel", null)
+                            .show();
                 }
             });
             recyclerView.setAdapter(ruleAdapter);
@@ -97,6 +215,11 @@ public class MainActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 if (ruleAdapter != null) {
                     ruleAdapter.setRules(rules);
+                }
+                // Welcome/empty message only when there are no rules yet
+                View emptyState = findViewById(R.id.empty_state);
+                if (emptyState != null) {
+                    emptyState.setVisibility(rules.isEmpty() ? View.VISIBLE : View.GONE);
                 }
             });
         });

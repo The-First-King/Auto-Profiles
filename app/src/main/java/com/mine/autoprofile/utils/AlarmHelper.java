@@ -27,6 +27,12 @@ public class AlarmHelper {
      */
     public static void scheduleAlarm(Context context, long ruleId, long profileId,
                                      String timeString, boolean allowImmediateStart) {
+        // Soft kill switch: while OFF, the app must not register any alarms,
+        // regardless of who asks (UI, BootReceiver, ScheduleReceiver reschedule).
+        if (!ProfileSwitcher.isMasterEnabled(context)) {
+            Log.i("AutoProfile", "Master switch OFF - not scheduling alarms for rule " + ruleId);
+            return;
+        }
         // timeString format expected: "08:00-17:00|2,3,4,5,6"
         try {
             String[] parts = timeString.split("\\|");
@@ -48,8 +54,11 @@ public class AlarmHelper {
             // 1. START alarm (Request Code: ruleId * 2)
             long nextStartTime;
             if (allowImmediateStart && durationMs > 0
-                    && isWithinInterval(now, startMinutes, durationMs, daysStr)) {
-                // The user saved a rule whose window is active right now -> apply it immediately
+                    && isWithinInterval(now, startMinutes, durationMs, daysStr)
+                    && !hasRevertSaved(context, ruleId)) {
+                // The user saved a rule whose window is active right now -> apply it
+                // immediately. hasRevertSaved() prevents a second immediate fire when
+                // alarms are re-registered (app open / app update) mid-window.
                 nextStartTime = now + 1500;
             } else {
                 nextStartTime = calculateNextOccurrence(now, startMinutes, daysStr);
@@ -69,6 +78,26 @@ public class AlarmHelper {
         } catch (Exception e) {
             Log.e("AutoProfile", "Error parsing schedule string", e);
         }
+    }
+
+    /** Cancels both the START and END alarms of a rule (used by delete/disable/edit). */
+    public static void cancelAlarms(Context context, long ruleId) {
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (alarmManager == null) return;
+        for (int requestCode : new int[]{(int) ruleId * 2, (int) ruleId * 2 + 1}) {
+            Intent intent = new Intent(context, ScheduleReceiver.class);
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                    context, requestCode, intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            alarmManager.cancel(pendingIntent);
+            pendingIntent.cancel();
+        }
+        Log.i("AutoProfile", "Cancelled alarms for rule " + ruleId);
+    }
+
+    private static boolean hasRevertSaved(Context context, long ruleId) {
+        return context.getSharedPreferences(ProfileSwitcher.PREF_NAME, Context.MODE_PRIVATE)
+                .contains(ProfileSwitcher.REVERT_KEY_PREFIX + ruleId);
     }
 
     private static int parseMinutes(String hhmm) {

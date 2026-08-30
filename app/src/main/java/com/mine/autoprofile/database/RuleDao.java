@@ -4,6 +4,7 @@ import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
 import androidx.room.Transaction;
+import androidx.room.Update;
 import com.mine.autoprofile.models.Rule;
 import com.mine.autoprofile.models.FullRule;
 import java.util.List;
@@ -21,4 +22,10 @@ public interface RuleDao {
 
     @Insert
     long insert(Rule rule);
+
+    @Update
+    void update(Rule rule);
+
+    @Query("DELETE FROM rules WHERE id = :ruleId")
+    void deleteById(long ruleId);
 }
