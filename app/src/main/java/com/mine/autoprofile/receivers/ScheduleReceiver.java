@@ -79,7 +79,13 @@ public class ScheduleReceiver extends BroadcastReceiver {
                 // at this instant "now" is inside the window, so an immediate-start
                 // check here would re-fire the START event in a loop.
                 if (triggerValue != null) {
-                    AlarmHelper.scheduleAlarm(context, ruleId, profileId, triggerValue, false);
+                    boolean alive = AlarmHelper.scheduleAlarm(context, ruleId, profileId, triggerValue, false);
+                    if (!alive) {
+                        // One-time event finished, or COUNT/UNTIL termination reached:
+                        // no upcoming events remain, so mark the rule as done (disabled).
+                        db.ruleDao().disableById(ruleId);
+                        Log.i("AutoProfile", "Rule " + ruleId + " completed its schedule - disabled.");
+                    }
                 }
             } finally {
                 pendingResult.finish();
