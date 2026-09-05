@@ -28,4 +28,8 @@ public interface RuleDao {
 
     @Query("DELETE FROM rules WHERE id = :ruleId")
     void deleteById(long ruleId);
+
+    // Marks a rule as finished once its schedule has no upcoming events
+    @Query("UPDATE rules SET enabled = 0 WHERE id = :ruleId")
+    void disableById(long ruleId);
 }
