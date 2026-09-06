@@ -143,6 +143,10 @@ public class ScheduleActivity extends AppCompatActivity {
         RadioGroup rgType = findViewById(R.id.rg_event_type);
         rgType.setOnCheckedChangeListener((g, id) -> refreshSectionVisibility());
 
+        // Etar-style live limits: repeat interval 1..99, occurrence count 1..730.
+        attachRangeClamp(etInterval, 99);
+        attachRangeClamp(etCount, 730);
+
         // One-time pickers
         btnOnceStartDate.setOnClickListener(v -> pickDate(onceStartDate, d -> { onceStartDate = d; refreshAllLabels(); }));
         btnOnceStartTime.setOnClickListener(v -> pickTime(onceStartTime, t -> { onceStartTime = t; refreshAllLabels(); }));
@@ -163,13 +167,44 @@ public class ScheduleActivity extends AppCompatActivity {
             @Override public void onNothingSelected(AdapterView<?> p) { }
         });
 
-        RadioGroup rgTerm = findViewById(R.id.rg_term);
-        rgTerm.setOnCheckedChangeListener((g, id) -> refreshTermEnabled());
-        // The nested radio rows are inside LinearLayouts, so RadioGroup can't manage
-        // exclusivity by itself - do it manually.
+        // The three termination radios live in a plain LinearLayout (a RadioGroup
+        // only manages direct children and broke re-selecting "Never"), so
+        // exclusivity is handled manually here.
         rbForever.setOnClickListener(v -> { rbUntil.setChecked(false); rbCount.setChecked(false); refreshTermEnabled(); });
         rbUntil.setOnClickListener(v -> { rbForever.setChecked(false); rbCount.setChecked(false); refreshTermEnabled(); });
         rbCount.setOnClickListener(v -> { rbForever.setChecked(false); rbUntil.setChecked(false); refreshTermEnabled(); });
+    }
+
+    /**
+     * Keeps a numeric field within [1, max] while typing: "0" becomes "1" and
+     * anything above max becomes max. Emptying the field is allowed during
+     * editing; save-time parsing falls back to 1.
+     */
+    private void attachRangeClamp(EditText field, int max) {
+        field.addTextChangedListener(new android.text.TextWatcher() {
+            private boolean updating = false;
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+            @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
+            @Override public void afterTextChanged(android.text.Editable e) {
+                if (updating) return;
+                String t = e.toString().trim();
+                if (t.isEmpty()) return;
+                String fixed = null;
+                try {
+                    int v = Integer.parseInt(t);
+                    if (v < 1) fixed = "1";
+                    else if (v > max) fixed = String.valueOf(max);
+                } catch (NumberFormatException ex) {
+                    fixed = "1";
+                }
+                if (fixed != null) {
+                    updating = true;
+                    field.setText(fixed);
+                    field.setSelection(fixed.length());
+                    updating = false;
+                }
+            }
+        });
     }
 
     // ------------------------------------------------------------ UI helpers
@@ -298,7 +333,9 @@ public class ScheduleActivity extends AppCompatActivity {
         s.freq = selectedFreq();
 
         try {
-            s.interval = Math.max(1, Integer.parseInt(etInterval.getText().toString().trim()));
+            String raw = etInterval.getText().toString().trim();
+            s.interval = raw.isEmpty() ? 1
+                    : Math.min(99, Math.max(1, Integer.parseInt(raw)));
         } catch (NumberFormatException e) {
             Toast.makeText(this, "Enter a valid repeat interval", Toast.LENGTH_SHORT).show();
             return null;
@@ -325,7 +362,9 @@ public class ScheduleActivity extends AppCompatActivity {
         } else if (rbCount.isChecked()) {
             s.term = Schedule.Term.COUNT;
             try {
-                s.count = Math.max(1, Integer.parseInt(etCount.getText().toString().trim()));
+                String raw = etCount.getText().toString().trim();
+                s.count = raw.isEmpty() ? 1
+                        : Math.min(730, Math.max(1, Integer.parseInt(raw)));
             } catch (NumberFormatException e) {
                 Toast.makeText(this, "Enter a valid number of occurrences", Toast.LENGTH_SHORT).show();
                 return null;
