@@ -179,7 +179,7 @@
 
             <EditText
                 android:id="@+id/et_interval"
-                android:layout_width="40dp"
+                android:layout_width="36dp"
                 android:layout_height="wrap_content"
                 android:inputType="number"
                 android:gravity="center"
@@ -288,7 +288,7 @@
 
                 <EditText
                     android:id="@+id/et_count"
-                    android:layout_width="45dp"
+                    android:layout_width="40dp"
                     android:layout_height="wrap_content"
                     android:inputType="number"
                     android:gravity="center"
