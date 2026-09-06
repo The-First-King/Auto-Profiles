@@ -48,7 +48,10 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
         FullRule fullRule = rules.get(position);
 
         // 1. Set Rule Name (Since your Rule model doesn't have a name string, we can use the ID or trigger type)
-        holder.ruleName.setText("Rule #" + fullRule.rule.getId() + " (" + fullRule.trigger.getType() + ")");
+        // Display a positional number (1..n) instead of the database id, so the
+        // numbering has no gaps after deletions. The id remains the stable
+        // internal key for alarms and edits.
+        holder.ruleName.setText("Rule #" + (position + 1) + " (" + fullRule.trigger.getType() + ")");
 
         // 2. Set Profile Name
         // NOTE: Assuming your Profile.java model has a getName() method. If not, use String.valueOf(fullRule.profile.getId())
