@@ -48,8 +48,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Start background monitoring service when app opens
-        Intent serviceIntent = new Intent(this, TriggerMonitorService.class);
-        startService(serviceIntent);
+        // The background monitor runs only while the master switch is ON
+        updateMonitorService(ProfileSwitcher.isMasterEnabled(this));
 
         // Initialize the LineageOS Profile Manager via Reflection & DexClassLoader
         initProfileManager();
@@ -99,6 +99,16 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    /** Starts/stops the foreground monitor (and its status-bar notification). */
+    private void updateMonitorService(boolean enabled) {
+        Intent serviceIntent = new Intent(this, TriggerMonitorService.class);
+        if (enabled) {
+            startService(serviceIntent);
+        } else {
+            stopService(serviceIntent);
+        }
+    }
+
     private void setupMasterSwitch() {
         SwitchCompat masterSwitch = findViewById(R.id.master_switch);
         if (masterSwitch == null) return;
@@ -107,6 +117,8 @@ public class MainActivity extends AppCompatActivity {
 
         masterSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             ProfileSwitcher.setMasterEnabled(this, isChecked);
+            // Bring the background monitor (and its notification) in line with the switch
+            updateMonitorService(isChecked);
             if (isChecked) {
                 // Bring every enabled rule back to life (fires immediately for
                 // rules whose window covers the current time)
@@ -179,8 +191,7 @@ public class MainActivity extends AppCompatActivity {
                     String profileName = rule.profile != null ? rule.profile.getName() : "?";
                     new AlertDialog.Builder(MainActivity.this)
                             .setTitle("Delete rule")
-                            .setMessage("Delete rule #" + rule.rule.getId()
-                                    + " for profile '" + profileName + "'?")
+                            .setMessage("Delete this rule for profile '" + profileName + "'?")
                             .setPositiveButton("Delete", (d, w) ->
                                     Executors.newSingleThreadExecutor().execute(() -> {
                                         // 1. Stop future alarms
