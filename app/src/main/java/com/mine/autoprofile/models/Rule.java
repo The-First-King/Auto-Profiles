@@ -12,6 +12,9 @@ public class Rule {
     private long triggerId;
     private boolean enabled;
 
+    /** Optional user-given name (introduced with location rules, DB v2). */
+    private String name;
+
     public Rule(long profileId, long triggerId, boolean enabled) {
         this.profileId = profileId;
         this.triggerId = triggerId;
@@ -29,4 +32,7 @@ public class Rule {
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 }
