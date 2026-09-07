@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
@@ -48,13 +49,8 @@
             android:exported="false" />
 
         <!-- Receivers -->
-        <receiver
-            android:name=".receivers.CellTowerReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.PHONE_STATE" />
-            </intent-filter>
-        </receiver>
+        <!-- NOTE: CellTowerReceiver removed - TriggerMonitorService handles cell events correctly -->
+        <!-- The PHONE_STATE broadcast is for call events, not cell tower changes -->
 
         <receiver
             android:name=".receivers.ScheduleReceiver"
