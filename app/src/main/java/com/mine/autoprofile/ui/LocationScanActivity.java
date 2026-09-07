@@ -8,12 +8,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.telephony.CellInfo;
-import android.telephony.CellIdentityGsm;
-import android.telephony.CellIdentityLte;
-import android.telephony.CellIdentityWcdma;
-import android.telephony.CellInfoGsm;
-import android.telephony.CellInfoLte;
-import android.telephony.CellInfoWcdma;
 import android.telephony.TelephonyManager;
 import android.text.InputFilter;
 import android.util.Log;
@@ -37,10 +31,11 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 
 /**
- * DIAGNOSTIC VERSION - Use this to debug cell detection issues.
- * This version includes extensive logging to identify exactly why cells aren't detected.
+ * GSM/LTE Location Scanner
  *
- * Replace LocationScanActivity.java temporarily with this version, then check logcat.
+ * FIXED VERSION: Uses getAllCellInfo() as primary method
+ * On some devices (LineageOS 19.1 + Android 12), requestCellInfoUpdate() doesn't work
+ * but getAllCellInfo() does. This version tries getAllCellInfo() first.
  */
 public class LocationScanActivity extends AppCompatActivity {
 
@@ -58,7 +53,6 @@ public class LocationScanActivity extends AppCompatActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TelephonyManager telephonyManager;
     private boolean scanning = false;
-    private int scanAttempts = 0;
 
     private TextView tvStatus, tvCellsHeader, tvCells;
     private Button btnComplete;
@@ -67,8 +61,6 @@ public class LocationScanActivity extends AppCompatActivity {
         @Override
         public void run() {
             if (!scanning) return;
-            scanAttempts++;
-            Log.d(TAG, ">>> SCAN ATTEMPT #" + scanAttempts);
             requestScan();
             handler.postDelayed(this, SCAN_INTERVAL_MS);
         }
@@ -96,26 +88,6 @@ public class LocationScanActivity extends AppCompatActivity {
 
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 
-        // DIAGNOSTIC: Log device info
-        Log.d(TAG, "=== LocationScanActivity.onCreate() ===");
-        Log.d(TAG, "Device API Level: " + Build.VERSION.SDK_INT);
-        Log.d(TAG, "TelephonyManager: " + (telephonyManager == null ? "NULL!" : "OK"));
-
-        if (telephonyManager != null) {
-            try {
-                String imsi = telephonyManager.getSubscriberId();
-                Log.d(TAG, "IMSI (SIM): " + (imsi == null ? "NULL - NO SIM!" : "OK - " + imsi.substring(0, Math.min(6, imsi.length())) + "..."));
-            } catch (Exception e) {
-                Log.e(TAG, "Cannot read IMSI", e);
-            }
-            try {
-                String operator = telephonyManager.getNetworkOperatorName();
-                Log.d(TAG, "Operator: " + (operator == null ? "NULL" : operator));
-            } catch (Exception e) {
-                Log.e(TAG, "Cannot read operator", e);
-            }
-        }
-
         if (isEditMode()) {
             ((TextView) findViewById(R.id.tv_scan_title)).setText("Update Location Rule");
             foundCells.addAll(CellUtils.fromTriggerValue(
@@ -131,12 +103,9 @@ public class LocationScanActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        Log.d(TAG, "onStart: Checking permissions...");
         if (hasLocationPermission()) {
-            Log.d(TAG, "onStart: All permissions OK, starting scan");
             startScanning();
         } else {
-            Log.w(TAG, "onStart: Permissions missing, requesting...");
             ActivityCompat.requestPermissions(this,
                     new String[]{
                             Manifest.permission.ACCESS_FINE_LOCATION,
@@ -157,11 +126,9 @@ public class LocationScanActivity extends AppCompatActivity {
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQ_LOCATION) {
-            Log.d(TAG, "onRequestPermissionsResult: Granted=" + (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED));
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startScanning();
             } else {
-                Log.e(TAG, "Permissions denied!");
                 Toast.makeText(this,
                         "Location, phone, and network permissions are required to scan cell towers",
                         Toast.LENGTH_LONG).show();
@@ -171,15 +138,12 @@ public class LocationScanActivity extends AppCompatActivity {
     }
 
     private boolean hasLocationPermission() {
-        boolean fine = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+        return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED
+            && ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+                == PackageManager.PERMISSION_GRANTED
+            && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_NETWORK_STATE)
                 == PackageManager.PERMISSION_GRANTED;
-        boolean phone = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
-                == PackageManager.PERMISSION_GRANTED;
-        boolean network = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_NETWORK_STATE)
-                == PackageManager.PERMISSION_GRANTED;
-
-        Log.d(TAG, "Permission check: Fine=" + fine + " Phone=" + phone + " Network=" + network);
-        return fine && phone && network;
     }
 
     // ------------------------------------------------------------- scanning
@@ -187,105 +151,70 @@ public class LocationScanActivity extends AppCompatActivity {
     private void startScanning() {
         if (scanning) return;
         scanning = true;
-        scanAttempts = 0;
         tvStatus.setText("Scanning in progress...");
-        Log.d(TAG, "*** SCANNING STARTED ***");
+        Log.d(TAG, "Started cell tower scanning");
         handler.post(scanTick);
     }
 
     private void stopScanning() {
         scanning = false;
         handler.removeCallbacks(scanTick);
-        Log.d(TAG, "*** SCANNING STOPPED (total attempts: " + scanAttempts + ") ***");
+        Log.d(TAG, "Stopped cell tower scanning");
     }
 
     @SuppressWarnings("MissingPermission")
     private void requestScan() {
-        if (telephonyManager == null) {
-            Log.e(TAG, "[SCAN #" + scanAttempts + "] FATAL: TelephonyManager is NULL");
-            return;
-        }
-        if (!hasLocationPermission()) {
-            Log.e(TAG, "[SCAN #" + scanAttempts + "] Permissions not granted");
+        if (telephonyManager == null || !hasLocationPermission()) {
+            Log.w(TAG, "requestScan: TM null or permission missing");
             return;
         }
 
         try {
-            Log.d(TAG, "[SCAN #" + scanAttempts + "] API Level: " + Build.VERSION.SDK_INT +
-                   " (using " + (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? "requestCellInfoUpdate" : "getAllCellInfo") + ")");
+            // PRIORITY 1: Try getAllCellInfo() - works better on some devices (LineageOS 19.1)
+            Log.d(TAG, "Attempting getAllCellInfo()...");
+            List<CellInfo> cells = telephonyManager.getAllCellInfo();
 
+            if (cells != null && !cells.isEmpty()) {
+                Log.d(TAG, "getAllCellInfo() SUCCESS: " + cells.size() + " cells found");
+                addCells(cells);
+                return;
+            } else {
+                Log.d(TAG, "getAllCellInfo() returned " +
+                    (cells == null ? "NULL" : "empty list (0 cells)"));
+            }
+
+            // PRIORITY 2: Fallback to requestCellInfoUpdate on API 29+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                Log.d(TAG, "[SCAN #" + scanAttempts + "] Calling requestCellInfoUpdate()...");
+                Log.d(TAG, "Fallback: Attempting requestCellInfoUpdate()...");
                 telephonyManager.requestCellInfoUpdate(getMainExecutor(),
                         new TelephonyManager.CellInfoCallback() {
                             @Override
                             public void onCellInfo(@NonNull List<CellInfo> cellInfo) {
-                                Log.d(TAG, "[SCAN #" + scanAttempts + "] requestCellInfoUpdate callback received");
                                 if (cellInfo == null) {
-                                    Log.w(TAG, "[SCAN #" + scanAttempts + "] Callback: cellInfo is NULL");
+                                    Log.d(TAG, "requestCellInfoUpdate callback: NULL");
                                 } else {
-                                    Log.d(TAG, "[SCAN #" + scanAttempts + "] Callback: " + cellInfo.size() + " cells received");
-                                    logCellDetails(cellInfo);
+                                    Log.d(TAG, "requestCellInfoUpdate callback: " +
+                                        cellInfo.size() + " cells");
                                 }
                                 addCells(cellInfo);
                             }
                         });
-            } else {
-                Log.d(TAG, "[SCAN #" + scanAttempts + "] Calling getAllCellInfo()...");
-                List<CellInfo> cells = telephonyManager.getAllCellInfo();
-                if (cells == null) {
-                    Log.w(TAG, "[SCAN #" + scanAttempts + "] getAllCellInfo() returned NULL");
-                } else {
-                    Log.d(TAG, "[SCAN #" + scanAttempts + "] getAllCellInfo() returned " + cells.size() + " cells");
-                    logCellDetails(cells);
-                }
-                addCells(cells);
             }
+
         } catch (SecurityException e) {
-            Log.e(TAG, "[SCAN #" + scanAttempts + "] SecurityException - runtime permissions may not be granted", e);
+            Log.e(TAG, "SecurityException in cell scan", e);
         } catch (Exception e) {
-            Log.e(TAG, "[SCAN #" + scanAttempts + "] Exception in requestScan()", e);
-            e.printStackTrace();
-        }
-    }
-
-    private void logCellDetails(List<CellInfo> cellInfo) {
-        if (cellInfo == null || cellInfo.isEmpty()) return;
-
-        for (int i = 0; i < Math.min(3, cellInfo.size()); i++) {
-            CellInfo info = cellInfo.get(i);
-            try {
-                if (info instanceof CellInfoGsm) {
-                    CellIdentityGsm id = ((CellInfoGsm) info).getCellIdentity();
-                    Log.d(TAG, "  [" + i + "] GSM: LAC=" + id.getLac() + " CID=" + id.getCid() +
-                           " MCC=" + id.getMccString() + " MNC=" + id.getMncString() + " Registered=" + info.isRegistered());
-                } else if (info instanceof CellInfoWcdma) {
-                    CellIdentityWcdma id = ((CellInfoWcdma) info).getCellIdentity();
-                    Log.d(TAG, "  [" + i + "] WCDMA: LAC=" + id.getLac() + " CID=" + id.getCid() +
-                           " MCC=" + id.getMccString() + " MNC=" + id.getMncString() + " Registered=" + info.isRegistered());
-                } else if (info instanceof CellInfoLte) {
-                    CellIdentityLte id = ((CellInfoLte) info).getCellIdentity();
-                    Log.d(TAG, "  [" + i + "] LTE: TAC=" + id.getTac() + " CI=" + id.getCi() +
-                           " MCC=" + id.getMccString() + " MNC=" + id.getMncString() + " Registered=" + info.isRegistered());
-                } else {
-                    Log.d(TAG, "  [" + i + "] " + info.getClass().getSimpleName() + " Registered=" + info.isRegistered());
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "  [" + i + "] Error reading cell details", e);
-            }
+            Log.e(TAG, "Exception in cell scan", e);
         }
     }
 
     private void addCells(List<CellInfo> cellInfo) {
         int before = foundCells.size();
         Set<String> newCells = CellUtils.cellKeys(cellInfo);
-        Log.d(TAG, "addCells(): Input had " + (cellInfo == null ? "null" : cellInfo.size()) + " cells, " +
-               "CellUtils.cellKeys() extracted " + newCells.size() + " valid keys");
-
         foundCells.addAll(newCells);
-        Log.d(TAG, "addCells(): Total cells now: " + before + " → " + foundCells.size());
 
         if (foundCells.size() != before || before == 0) {
+            Log.d(TAG, "Cells updated: " + before + " → " + foundCells.size());
             renderCells();
         }
     }
@@ -300,7 +229,6 @@ public class LocationScanActivity extends AppCompatActivity {
         }
         tvCells.setText(b.toString());
         btnComplete.setEnabled(!foundCells.isEmpty());
-        Log.d(TAG, "renderCells(): UI updated, Complete button " + (btnComplete.isEnabled() ? "ENABLED" : "DISABLED"));
     }
 
     // ---------------------------------------------------------------- save
@@ -338,7 +266,7 @@ public class LocationScanActivity extends AppCompatActivity {
 
     private void saveRule(String name) {
         String triggerValue = CellUtils.toTriggerValue(foundCells);
-        Log.d(TAG, "Saving rule '" + name + "' with " + foundCells.size() + " cells");
+        Log.d(TAG, "Saving location rule: '" + name + "' with " + foundCells.size() + " cells");
 
         Executors.newSingleThreadExecutor().execute(() -> {
             AppDatabase db = AppDatabase.getInstance(this);
