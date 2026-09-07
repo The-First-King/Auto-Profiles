@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/white">
+
+    <TextView
+        android:id="@+id/tv_scan_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Location Rule (GSM)"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/tv_scan_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Scanning in progress..."
+        android:textSize="16sp"
+        android:textColor="@color/colorPrimary"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp"/>
+
+    <TextView
+        android:id="@+id/tv_cells_header"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Cells found (0):"
+        android:textSize="15sp"
+        android:textColor="@color/text_primary"
+        android:layout_marginBottom="4dp"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:id="@+id/tv_cells"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary"
+            android:lineSpacingExtra="4dp"/>
+    </ScrollView>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Walk around the location while scanning to capture all nearby towers, then tap Complete."
+        android:textSize="13sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="12dp"/>
+
+    <Button
+        android:id="@+id/btn_complete"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:enabled="false"
+        android:text="Complete"
+        android:textColor="@color/white"
+        android:backgroundTint="@color/colorPrimary" />
+
+</LinearLayout>
