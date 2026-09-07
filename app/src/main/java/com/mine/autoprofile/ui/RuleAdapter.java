@@ -48,10 +48,15 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
         FullRule fullRule = rules.get(position);
 
         // 1. Set Rule Name (Since your Rule model doesn't have a name string, we can use the ID or trigger type)
-        // Display a positional number (1..n) instead of the database id, so the
-        // numbering has no gaps after deletions. The id remains the stable
-        // internal key for alarms and edits.
-        holder.ruleName.setText("Rule #" + (position + 1) + " (" + fullRule.trigger.getType() + ")");
+        // A user-given name wins (location rules); otherwise show a positional
+        // number (1..n) so the numbering has no gaps after deletions. The id
+        // remains the stable internal key for alarms and edits.
+        String userName = fullRule.rule != null ? fullRule.rule.getName() : null;
+        if (userName != null && !userName.trim().isEmpty()) {
+            holder.ruleName.setText(userName);
+        } else {
+            holder.ruleName.setText("Rule #" + (position + 1) + " (" + fullRule.trigger.getType() + ")");
+        }
 
         // 2. Set Profile Name
         // NOTE: Assuming your Profile.java model has a getName() method. If not, use String.valueOf(fullRule.profile.getId())
@@ -87,6 +92,10 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
     private static String formatTrigger(FullRule fullRule) {
         if (fullRule.trigger == null) return "Trigger: ?";
         String value = fullRule.trigger.getValue();
+        if ("CELL".equals(fullRule.trigger.getType())) {
+            int n = com.mine.autoprofile.utils.CellUtils.fromTriggerValue(value).size();
+            return "Location: " + n + " cell tower" + (n == 1 ? "" : "s");
+        }
         if (!"TIME".equals(fullRule.trigger.getType())) return "Trigger: " + value;
         com.mine.autoprofile.models.Schedule schedule =
                 com.mine.autoprofile.models.Schedule.parse(value);
