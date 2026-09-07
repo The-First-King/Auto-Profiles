@@ -3,6 +3,7 @@
     <color name="colorPrimary">#008577</color>
     <color name="colorPrimaryDark">#00574B</color>
     <color name="colorAccent">#008577</color>
+    <color name="ic_launcher_background">#167C80</color>
     
     <!-- Additional colors for Auto Profiles -->
     <color name="white">#FFFFFF</color>
