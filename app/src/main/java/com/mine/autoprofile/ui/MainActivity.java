@@ -1,8 +1,10 @@
 package com.mine.autoprofile.ui;
 
+import android.Manifest;
 import android.app.AlarmManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -13,6 +15,8 @@ import android.widget.Toast;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -24,6 +28,7 @@ import com.mine.autoprofile.services.TriggerMonitorService;
 import com.mine.autoprofile.utils.AlarmHelper;
 import com.mine.autoprofile.utils.ProfileSwitcher;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 
@@ -53,6 +58,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialize the LineageOS Profile Manager via Reflection & DexClassLoader
         initProfileManager();
+
+        // Runtime permissions: without location the cell scanner and monitor can't
+        // work; ask right at first launch as requested.
+        ensureRuntimePermissions();
 
         // On Android 14 (targetSdk 34) SCHEDULE_EXACT_ALARM is DENIED by default.
         // Without it, schedule rules never fire precisely (or, previously, at all).
@@ -97,6 +106,50 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private static final int REQ_RUNTIME_PERMS = 42;
+
+    /** Requests the dangerous permissions the app needs, on first launch. */
+    private void ensureRuntimePermissions() {
+        List<String> needed = new ArrayList<>();
+        for (String perm : new String[]{
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.READ_PHONE_STATE}) {
+            if (ContextCompat.checkSelfPermission(this, perm)
+                    != PackageManager.PERMISSION_GRANTED) {
+                needed.add(perm);
+            }
+        }
+        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this,
+                "android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+            needed.add("android.permission.POST_NOTIFICATIONS");
+        }
+        if (!needed.isEmpty()) {
+            ActivityCompat.requestPermissions(this, needed.toArray(new String[0]),
+                    REQ_RUNTIME_PERMS);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                                           int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_RUNTIME_PERMS) {
+            for (int i = 0; i < permissions.length; i++) {
+                if (Manifest.permission.ACCESS_FINE_LOCATION.equals(permissions[i])) {
+                    if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                        // The monitor may already be running without a cell listener
+                        // (started before the grant) - poke it so it attaches one.
+                        updateMonitorService(ProfileSwitcher.isMasterEnabled(this));
+                    } else {
+                        Toast.makeText(this,
+                                "Without location access, GSM location rules will not work.",
+                                Toast.LENGTH_LONG).show();
+                    }
+                }
+            }
+        }
     }
 
     /** Starts/stops the foreground monitor (and its status-bar notification). */
@@ -158,6 +211,10 @@ public class MainActivity extends AppCompatActivity {
                             if (rule.trigger != null && "TIME".equals(rule.trigger.getType())) {
                                 AlarmHelper.scheduleAlarm(MainActivity.this, rule.rule.getId(),
                                         rule.rule.getProfileId(), rule.trigger.getValue());
+                            } else if (rule.trigger != null && "CELL".equals(rule.trigger.getType())
+                                    && ProfileSwitcher.isMasterEnabled(MainActivity.this)) {
+                                // Re-evaluate immediately: we might be at the location right now
+                                startService(new Intent(MainActivity.this, TriggerMonitorService.class));
                             }
                         } else {
                             AlarmHelper.cancelAlarms(MainActivity.this, rule.rule.getId());
@@ -173,16 +230,22 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onEditRule(FullRule rule) {
-                    if (rule.trigger == null || !"TIME".equals(rule.trigger.getType())) {
-                        Toast.makeText(MainActivity.this,
-                                "Only schedule rules can be edited for now", Toast.LENGTH_SHORT).show();
+                    if (rule.trigger == null) return;
+                    Class<?> editor;
+                    if ("TIME".equals(rule.trigger.getType())) {
+                        editor = ScheduleActivity.class;
+                    } else if ("CELL".equals(rule.trigger.getType())) {
+                        editor = LocationScanActivity.class;
+                    } else {
                         return;
                     }
-                    Intent intent = new Intent(MainActivity.this, ScheduleActivity.class);
+                    Intent intent = new Intent(MainActivity.this, editor);
                     intent.putExtra("PROFILE_ID", rule.rule.getProfileId());
                     intent.putExtra("RULE_ID", rule.rule.getId());
                     intent.putExtra("TRIGGER_ID", rule.trigger.getId());
                     intent.putExtra("TRIGGER_VALUE", rule.trigger.getValue());
+                    intent.putExtra("RULE_NAME", rule.rule.getName());
+                    intent.putExtra("RULE_ENABLED", rule.rule.isEnabled());
                     startActivity(intent);
                 }
 
@@ -340,42 +403,54 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(MainActivity.this)
             .setTitle("Create Rule")
             .setMessage("How should '" + profileName + "' be triggered?")
-            .setPositiveButton("Schedule", (dialog, which) -> {
-                
-                // Fetch or Create the profile in our local Room DB before launching ScheduleActivity
-                Executors.newSingleThreadExecutor().execute(() -> {
-                    AppDatabase db = AppDatabase.getInstance(MainActivity.this);
-                    long profileId = -1;
-                    
-                    try {
-                        List<Profile> existingProfiles = db.profileDao().getAllProfiles();
-                        for (Profile p : existingProfiles) {
-                            if (p.getName() != null && p.getName().equals(profileName)) {
-                                profileId = p.getId();
-                                break;
-                            }
-                        }
-                        
-                        // If it doesn't exist in our DB yet, create it with matching constructor parameters
-                        if (profileId == -1) {
-                            Profile newProfile = new Profile(profileName, true);
-                            profileId = db.profileDao().insert(newProfile);
-                        }
-                    } catch (Exception e) {
-                        Log.e("AutoProfile", "DB Error checking profile", e);
-                    }
-
-                    long finalProfileId = profileId;
-                    runOnUiThread(() -> {
-                        Intent intent = new Intent(MainActivity.this, ScheduleActivity.class);
-                        intent.putExtra("PROFILE_ID", finalProfileId);
-                        startActivity(intent);
-                    });
-                });
-            })
+            .setPositiveButton("Schedule", (dialog, which) ->
+                    resolveProfileIdThen(profileName, ScheduleActivity.class))
             .setNegativeButton("Location (GSM)", (dialog, which) -> {
-                Toast.makeText(MainActivity.this, "GSM Scanner coming soon!", Toast.LENGTH_SHORT).show();
+                if (ContextCompat.checkSelfPermission(MainActivity.this,
+                        Manifest.permission.ACCESS_FINE_LOCATION)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(MainActivity.this,
+                            "Location permission is needed to scan cell towers",
+                            Toast.LENGTH_LONG).show();
+                    ensureRuntimePermissions();
+                    return;
+                }
+                resolveProfileIdThen(profileName, LocationScanActivity.class);
             })
             .show();
+    }
+
+    /**
+     * Fetches (or creates) the profile row in the local Room DB, then launches
+     * the given rule-editor activity with the resolved PROFILE_ID.
+     */
+    private void resolveProfileIdThen(String profileName, Class<?> activityClass) {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            AppDatabase db = AppDatabase.getInstance(MainActivity.this);
+            long profileId = -1;
+
+            try {
+                List<Profile> existingProfiles = db.profileDao().getAllProfiles();
+                for (Profile p : existingProfiles) {
+                    if (p.getName() != null && p.getName().equals(profileName)) {
+                        profileId = p.getId();
+                        break;
+                    }
+                }
+                if (profileId == -1) {
+                    Profile newProfile = new Profile(profileName, true);
+                    profileId = db.profileDao().insert(newProfile);
+                }
+            } catch (Exception e) {
+                Log.e("AutoProfile", "DB Error checking profile", e);
+            }
+
+            long finalProfileId = profileId;
+            runOnUiThread(() -> {
+                Intent intent = new Intent(MainActivity.this, activityClass);
+                intent.putExtra("PROFILE_ID", finalProfileId);
+                startActivity(intent);
+            });
+        });
     }
 }
