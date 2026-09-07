@@ -15,6 +15,8 @@ public final class ProfileSwitcher {
     public static final String PREF_NAME = "AutoProfilePrefs";
     public static final String REVERT_KEY_PREFIX = "revert_profile_rule_";
     public static final String MASTER_ENABLED_KEY = "master_enabled";
+    /** Per-rule flag: this CELL rule's location is currently considered "entered". */
+    public static final String CELL_ACTIVE_KEY_PREFIX = "cell_active_rule_";
     private static final String TAG = "AutoProfile";
 
     private ProfileSwitcher() {}
@@ -40,6 +42,8 @@ public final class ProfileSwitcher {
         android.content.SharedPreferences prefs =
                 context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         String key = REVERT_KEY_PREFIX + ruleId;
+        // A CELL rule being reverted is by definition no longer "entered"
+        prefs.edit().remove(CELL_ACTIVE_KEY_PREFIX + ruleId).apply();
         String profileToRevert = prefs.getString(key, null);
         if (profileToRevert != null) {
             Log.i(TAG, "Rule " + ruleId + " removed/changed mid-window - reverting to '"
