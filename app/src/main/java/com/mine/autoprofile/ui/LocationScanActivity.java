@@ -42,6 +42,7 @@ public class LocationScanActivity extends AppCompatActivity {
     private static final int REQ_LOCATION = 71;
     private static final long SCAN_INTERVAL_MS = 5000;
     private static final int MAX_NAME_LENGTH = 80;
+    private static final String TAG = "AutoProfile";
 
     private long profileId;
     private long editRuleId = -1;
@@ -107,7 +108,11 @@ public class LocationScanActivity extends AppCompatActivity {
             startScanning();
         } else {
             ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQ_LOCATION);
+                    new String[]{
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.READ_PHONE_STATE,
+                            Manifest.permission.ACCESS_NETWORK_STATE
+                    }, REQ_LOCATION);
         }
     }
 
@@ -126,15 +131,21 @@ public class LocationScanActivity extends AppCompatActivity {
                 startScanning();
             } else {
                 Toast.makeText(this,
-                        "Location permission is required to scan cell towers",
+                        "Location, phone, and network permissions are required to scan cell towers",
                         Toast.LENGTH_LONG).show();
+                Log.w(TAG, "Location scan: permissions denied");
                 finish();
             }
         }
     }
 
     private boolean hasLocationPermission() {
+        // Check all three required permissions for cell info access
         return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED
+            && ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+                == PackageManager.PERMISSION_GRANTED
+            && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_NETWORK_STATE)
                 == PackageManager.PERMISSION_GRANTED;
     }
 
@@ -144,40 +155,59 @@ public class LocationScanActivity extends AppCompatActivity {
         if (scanning) return;
         scanning = true;
         tvStatus.setText("Scanning in progress...");
+        Log.d(TAG, "Started cell tower scanning");
         handler.post(scanTick);
     }
 
     private void stopScanning() {
         scanning = false;
         handler.removeCallbacks(scanTick);
+        Log.d(TAG, "Stopped cell tower scanning");
     }
 
     @SuppressWarnings("MissingPermission")
     private void requestScan() {
-        if (telephonyManager == null || !hasLocationPermission()) return;
+        if (telephonyManager == null || !hasLocationPermission()) {
+            Log.w(TAG, "requestScan: TM null or permission missing");
+            return;
+        }
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Actively asks the modem for a fresh measurement
+                // API 29+: Actively asks the modem for a fresh measurement
                 telephonyManager.requestCellInfoUpdate(getMainExecutor(),
                         new TelephonyManager.CellInfoCallback() {
                             @Override
                             public void onCellInfo(@NonNull List<CellInfo> cellInfo) {
+                                if (cellInfo == null) {
+                                    Log.d(TAG, "requestCellInfoUpdate returned null");
+                                } else {
+                                    Log.d(TAG, "requestCellInfoUpdate returned " + cellInfo.size()
+                                        + " cells");
+                                }
                                 addCells(cellInfo);
                             }
                         });
             } else {
-                addCells(telephonyManager.getAllCellInfo());
+                // API 26-28: Use getAllCellInfo (may be stale)
+                List<CellInfo> cells = telephonyManager.getAllCellInfo();
+                if (cells == null) {
+                    Log.d(TAG, "getAllCellInfo returned null");
+                } else {
+                    Log.d(TAG, "getAllCellInfo returned " + cells.size() + " cells");
+                }
+                addCells(cells);
             }
         } catch (SecurityException e) {
-            Log.e("AutoProfile", "Cell scan failed (permission)", e);
+            Log.e(TAG, "Cell scan failed (permission)", e);
         } catch (Exception e) {
-            Log.e("AutoProfile", "Cell scan failed", e);
+            Log.e(TAG, "Cell scan failed", e);
         }
     }
 
     private void addCells(List<CellInfo> cellInfo) {
         int before = foundCells.size();
-        foundCells.addAll(CellUtils.cellKeys(cellInfo));
+        Set<String> newCells = CellUtils.cellKeys(cellInfo);
+        foundCells.addAll(newCells);
         if (foundCells.size() != before || before == 0) {
             renderCells();
         }
@@ -198,7 +228,10 @@ public class LocationScanActivity extends AppCompatActivity {
     // ---------------------------------------------------------------- save
 
     private void promptForNameAndSave() {
-        if (foundCells.isEmpty()) return;
+        if (foundCells.isEmpty()) {
+            Toast.makeText(this, "No cells found. Please scan again.", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         EditText input = new EditText(this);
         input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(MAX_NAME_LENGTH)});
@@ -227,6 +260,7 @@ public class LocationScanActivity extends AppCompatActivity {
 
     private void saveRule(String name) {
         String triggerValue = CellUtils.toTriggerValue(foundCells);
+        Log.d(TAG, "Saving rule '" + name + "' with " + foundCells.size() + " cells");
 
         Executors.newSingleThreadExecutor().execute(() -> {
             AppDatabase db = AppDatabase.getInstance(this);
