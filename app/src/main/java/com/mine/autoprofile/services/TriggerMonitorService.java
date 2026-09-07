@@ -103,6 +103,10 @@ public class TriggerMonitorService extends Service {
 
     private boolean hasLocationPermission() {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED
+            && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+                == PackageManager.PERMISSION_GRANTED
+            && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_NETWORK_STATE)
                 == PackageManager.PERMISSION_GRANTED;
     }
 
@@ -168,11 +172,16 @@ public class TriggerMonitorService extends Service {
                         new TelephonyManager.CellInfoCallback() {
                             @Override
                             public void onCellInfo(@NonNull List<CellInfo> cellInfo) {
+                                Log.d(TAG, "requestFreshCellInfo: received " +
+                                    (cellInfo == null ? "null" : cellInfo.size() + " cells"));
                                 evaluate(cellInfo);
                             }
                         });
             } else {
-                evaluate(telephonyManager.getAllCellInfo());
+                List<CellInfo> cells = telephonyManager.getAllCellInfo();
+                Log.d(TAG, "requestFreshCellInfo: getAllCellInfo returned " +
+                    (cells == null ? "null" : cells.size() + " cells"));
+                evaluate(cells);
             }
         } catch (Exception e) {
             Log.e(TAG, "Cell refresh failed", e);
@@ -182,8 +191,14 @@ public class TriggerMonitorService extends Service {
     // ----------------------------------------------------------- evaluation
 
     private void evaluate(List<CellInfo> cellInfo) {
+        // CRITICAL: Null check BEFORE using cellInfo
+        if (cellInfo == null) {
+            Log.d(TAG, "evaluate: cellInfo is null, skipping evaluation");
+            return;
+        }
+
         final Set<String> inRange = CellUtils.cellKeys(cellInfo);
-        if (cellInfo == null) return;
+        Log.d(TAG, "evaluate: " + inRange.size() + " cells in range");
 
         executor.execute(() -> {
             if (!ProfileSwitcher.isMasterEnabled(this)) return;
