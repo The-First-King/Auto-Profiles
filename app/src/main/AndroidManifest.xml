@@ -35,6 +35,7 @@
         </activity>
 
         <activity android:name=".ui.ScheduleActivity" />
+        <activity android:name=".ui.LocationScanActivity" />
 
         <!-- Services -->
         <service
