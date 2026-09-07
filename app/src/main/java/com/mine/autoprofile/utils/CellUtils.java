@@ -19,7 +19,12 @@ import java.util.Set;
 /**
  * Builds stable identity keys for the cell towers currently in range, across
  * radio technologies (GSM / WCDMA / LTE / NR). A key looks like
- * "LTE:262-02-12345-6789012". Keys are what location rules store and match on.
+ * "LTE:302-720-30013-9693717". Keys are what location rules store and match on.
+ *
+ * A cell is only usable if it exposes a full global identity (MCC+MNC plus
+ * LAC/CID or TAC/CI). Unregistered neighbor cells often report null MCC/MNC
+ * and zeroed ids; those all collapse to the same key and would match at any
+ * location, so they are rejected.
  */
 public final class CellUtils {
 
@@ -40,26 +45,33 @@ public final class CellUtils {
         try {
             if (info instanceof CellInfoGsm) {
                 CellIdentityGsm id = ((CellInfoGsm) info).getCellIdentity();
+                if (id.getMccString() == null || id.getMncString() == null) return null;
                 if (invalid(id.getCid()) || invalid(id.getLac())) return null;
-                return "GSM:" + mcc(id.getMccString()) + "-" + mcc(id.getMncString())
+                if (id.getCid() == 0 && id.getLac() == 0) return null; // unidentified neighbor
+                return "GSM:" + id.getMccString() + "-" + id.getMncString()
                         + "-" + id.getLac() + "-" + id.getCid();
             }
             if (info instanceof CellInfoWcdma) {
                 CellIdentityWcdma id = ((CellInfoWcdma) info).getCellIdentity();
+                if (id.getMccString() == null || id.getMncString() == null) return null;
                 if (invalid(id.getCid()) || invalid(id.getLac())) return null;
-                return "WCDMA:" + mcc(id.getMccString()) + "-" + mcc(id.getMncString())
+                if (id.getCid() == 0 && id.getLac() == 0) return null; // unidentified neighbor
+                return "WCDMA:" + id.getMccString() + "-" + id.getMncString()
                         + "-" + id.getLac() + "-" + id.getCid();
             }
             if (info instanceof CellInfoLte) {
                 CellIdentityLte id = ((CellInfoLte) info).getCellIdentity();
+                if (id.getMccString() == null || id.getMncString() == null) return null;
                 if (invalid(id.getCi()) || invalid(id.getTac())) return null;
-                return "LTE:" + mcc(id.getMccString()) + "-" + mcc(id.getMncString())
+                if (id.getCi() == 0 && id.getTac() == 0) return null; // unidentified neighbor
+                return "LTE:" + id.getMccString() + "-" + id.getMncString()
                         + "-" + id.getTac() + "-" + id.getCi();
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && info instanceof CellInfoNr) {
                 CellIdentityNr id = (CellIdentityNr) ((CellInfoNr) info).getCellIdentity();
-                if (id.getNci() == Long.MAX_VALUE) return null;
-                return "NR:" + mcc(id.getMccString()) + "-" + mcc(id.getMncString())
+                if (id.getMccString() == null || id.getMncString() == null) return null;
+                if (id.getNci() == Long.MAX_VALUE || id.getNci() == 0) return null;
+                return "NR:" + id.getMccString() + "-" + id.getMncString()
                         + "-" + id.getNci();
             }
         } catch (Exception ignored) { }
@@ -70,11 +82,7 @@ public final class CellUtils {
         return v == Integer.MAX_VALUE || v < 0; // CellInfo.UNAVAILABLE == Integer.MAX_VALUE
     }
 
-    private static String mcc(String v) {
-        return v == null ? "?" : v;
-    }
-
-    /** Compact display form for the scan screen, e.g. "LTE 12345-6789012". */
+    /** Compact display form for the scan screen, e.g. "LTE 30013-9693717". */
     public static String shortLabel(String key) {
         int colon = key.indexOf(':');
         if (colon < 0) return key;
