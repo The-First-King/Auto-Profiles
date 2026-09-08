@@ -1,4 +1,4 @@
-package com.mine.autoprofile.utils;
+package com.mine.autoprofiles.utils;
 
 import android.telephony.CellIdentityGsm;
 import android.telephony.CellIdentityLte;
