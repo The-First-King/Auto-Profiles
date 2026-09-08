@@ -16,7 +16,6 @@ public interface RuleDao {
     @Query("SELECT * FROM rules")
     List<FullRule> getAllRulesWithDetails();
 
-    // Restored: Used by your CellTowerReceiver to fetch active rules
     @Query("SELECT * FROM rules WHERE enabled = 1")
     List<Rule> getEnabledRules();
 
