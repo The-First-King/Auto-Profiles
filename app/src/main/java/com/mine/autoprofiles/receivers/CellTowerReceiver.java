@@ -1,12 +1,12 @@
-package com.mine.autoprofile.receivers;
+package com.mine.autoprofiles.receivers;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import com.mine.autoprofile.database.AppDatabase;
-import com.mine.autoprofile.models.Rule;
-import com.mine.autoprofile.models.Trigger;
-import com.mine.autoprofile.services.ProfileManagerService;
+import com.mine.autoprofiles.database.AppDatabase;
+import com.mine.autoprofiles.models.Rule;
+import com.mine.autoprofiles.models.Trigger;
+import com.mine.autoprofiles.services.ProfileManagerService;
 import java.util.List;
 import java.util.concurrent.Executors;
 
