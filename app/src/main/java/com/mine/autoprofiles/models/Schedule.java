@@ -11,49 +11,30 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.TreeSet;
 
-/**
- * Schedule definition for a TIME trigger, stored as JSON in triggers.value.
- * Modeled after the iCalendar RRULE concepts used by calendar apps (Etar etc.):
- * one-time events with explicit start/end datetimes, or recurring events with
- * DAILY / WEEKLY / MONTHLY / YEARLY frequency, an "every X" interval, and a
- * termination of never / until-date / occurrence-count.
- *
- * The legacy pre-JSON format "HH:MM-HH:MM|d,d,..." (d = java.util.Calendar
- * day-of-week, 1=Sun..7=Sat) is still parsed and treated as WEEKLY / every 1
- * week / no expiration, so rules created by older versions keep working.
- */
 public class Schedule {
 
     public enum Mode { ONCE, RECUR }
     public enum Freq { DAILY, WEEKLY, MONTHLY, YEARLY }
     public enum Term { NEVER, UNTIL, COUNT }
 
-    // --- ONCE ---
     public LocalDateTime onceStart;
     public LocalDateTime onceEnd;
-
-    // --- RECUR ---
     public LocalTime startTime;
     public LocalTime endTime;
-    /** First day the rule may occur; also defines day-of-month / month-day for MONTHLY/YEARLY. */
     public LocalDate anchor;
     public Freq freq = Freq.DAILY;
     public int interval = 1;
-    /** WEEKLY only. */
     public TreeSet<DayOfWeek> days = new TreeSet<>();
 
     public Mode mode = Mode.RECUR;
     public Term term = Term.NEVER;
-    public LocalDate until;   // Term.UNTIL (inclusive)
-    public int count;         // Term.COUNT
+    public LocalDate until;
+    public int count;
 
     private static final DateTimeFormatter D = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final DateTimeFormatter T = DateTimeFormatter.ofPattern("HH:mm");
     private static final DateTimeFormatter DT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
-    // ------------------------------------------------------------------ parse
-
-    /** @return parsed schedule, or null if the value is unusable. */
     public static Schedule parse(String value) {
         if (value == null) return null;
         String v = value.trim();
@@ -92,7 +73,6 @@ public class Schedule {
         }
     }
 
-    /** "08:00-17:00|2,3,4" with java.util.Calendar day numbers (1=Sun..7=Sat). */
     private static Schedule parseLegacy(String v) {
         try {
             String[] parts = v.split("\\|");
@@ -104,11 +84,10 @@ public class Schedule {
             s.term = Term.NEVER;
             s.startTime = LocalTime.parse(times[0].trim(), T);
             s.endTime = times.length > 1 ? LocalTime.parse(times[1].trim(), T) : s.startTime;
-            // Anchor safely in the past: legacy rules had no start date semantics.
             s.anchor = LocalDate.now().minusDays(7);
             for (String d : parts[1].split(",")) {
-                int cal = Integer.parseInt(d.trim());          // 1=Sun..7=Sat
-                s.days.add(DayOfWeek.of(cal == 1 ? 7 : cal - 1)); // -> ISO 1=Mon..7=Sun
+                int cal = Integer.parseInt(d.trim());
+                s.days.add(DayOfWeek.of(cal == 1 ? 7 : cal - 1));
             }
             if (s.days.isEmpty()) return null;
             return s;
@@ -116,8 +95,6 @@ public class Schedule {
             return null;
         }
     }
-
-    // -------------------------------------------------------------- serialize
 
     public String toJson() {
         try {
@@ -148,7 +125,6 @@ public class Schedule {
         }
     }
 
-    // -------------------------------------------------------------- describe
 
     private static final DateTimeFormatter HUMAN_DT =
             DateTimeFormatter.ofPattern("MMM d, HH:mm", Locale.getDefault());
@@ -157,7 +133,6 @@ public class Schedule {
     private static final DateTimeFormatter HUMAN_MD =
             DateTimeFormatter.ofPattern("MMM d", Locale.getDefault());
 
-    /** Short human-readable summary for the rule list. */
     public String describe() {
         if (mode == Mode.ONCE) {
             if (onceStart.toLocalDate().equals(onceEnd.toLocalDate())) {
