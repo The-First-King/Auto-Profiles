@@ -16,16 +16,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Builds stable identity keys for the cell towers currently in range, across
- * radio technologies (GSM / WCDMA / LTE / NR). A key looks like
- * "LTE:302-720-30013-9693717". Keys are what location rules store and match on.
- *
- * A cell is only usable if it exposes a full global identity (MCC+MNC plus
- * LAC/CID or TAC/CI). Unregistered neighbor cells often report null MCC/MNC
- * and zeroed ids; those all collapse to the same key and would match at any
- * location, so they are rejected.
- */
+
 public final class CellUtils {
 
     private CellUtils() {}
@@ -82,7 +73,6 @@ public final class CellUtils {
         return v == Integer.MAX_VALUE || v < 0; // CellInfo.UNAVAILABLE == Integer.MAX_VALUE
     }
 
-    /** Compact display form for the scan screen, e.g. "LTE 30013-9693717". */
     public static String shortLabel(String key) {
         int colon = key.indexOf(':');
         if (colon < 0) return key;
