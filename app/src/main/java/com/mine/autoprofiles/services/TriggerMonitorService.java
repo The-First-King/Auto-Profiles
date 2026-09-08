@@ -1,4 +1,4 @@
-package com.mine.autoprofile.services;
+package com.mine.autoprofiles.services;
 
 import android.Manifest;
 import android.app.Notification;
@@ -23,10 +23,10 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
-import com.mine.autoprofile.database.AppDatabase;
-import com.mine.autoprofile.models.FullRule;
-import com.mine.autoprofile.utils.CellUtils;
-import com.mine.autoprofile.utils.ProfileSwitcher;
+import com.mine.autoprofiles.database.AppDatabase;
+import com.mine.autoprofiles.models.FullRule;
+import com.mine.autoprofiles.utils.CellUtils;
+import com.mine.autoprofiles.utils.ProfileSwitcher;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
