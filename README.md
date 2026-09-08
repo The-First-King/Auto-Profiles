@@ -30,17 +30,24 @@ All rules are listed in the main window, where each one can be edited, deleted, 
 
 ## Permissions
 
-* **Location (precise)** — required by Android to read cell tower identities, which are treated as location data. GPS is not used.
-* **Phone** — to read the cellular network state.
-* **Network state** — to access network information.
-* **Run at startup** — to restore rule monitoring and alarms after a reboot.
-* **Foreground service** — to keep monitoring cell changes reliably in the background.
-* **Alarms & reminders** — to switch profiles at the exact scheduled time (Android 12+).
-* **Notifications** — for the persistent monitoring notification (Android 13+).
-* **Modify profiles** (`lineageos.permission.MODIFY_PROFILES`) — to switch LineageOS System Profiles.
+* **Location (precise)**: required by Android to read cell tower identities, which are treated as location data. GPS is not used.
+* **Phone**: to read the cellular network state.
+* **Network state**: to access network information.
+* **Run at startup**: to restore rule monitoring and alarms after a reboot.
+* **Foreground service**: to keep monitoring cell changes reliably in the background.
+* **Alarms & reminders**: to switch profiles at the exact scheduled time (Android 12+).
+* **Notifications**: for the persistent monitoring notification (Android 13+).
+* **Modify profiles** (`lineageos.permission.MODIFY_PROFILES`): to switch LineageOS System Profiles.
 
 ## Installation & License
 
-Download the latest APK from the [Releases](../../releases) page.
+<a href="https://github.com/The-First-King/Auto-Off-Bluetooth/releases"><img src="images/GitHub.png" alt="Get it on GitHub" height="60"></a>
+<a href="https://apt.izzysoft.de/packages/com.mine.autooffbluetooth"><img src="images/IzzyOnDroid.png" alt="Get it at IzzyOnDroid" height="60"></a>
 
-This program is free software: you can redistribute it and/or modify it under the terms of the license found in the [LICENSE](LICENSE) file. It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+---
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+---
