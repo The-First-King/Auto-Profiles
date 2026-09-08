@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Alignment math: recycler horizontal padding 0 + item horizontal padding 4dp
-     + card inner padding 12dp = 16dp, matching the app bar's 16dp padding, so
-     the "Rule #" text lines up with the app title and the rule switches line up
-     with the master switch. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
