@@ -112,9 +112,7 @@ public final class ProfileSwitcher {
                 return false;
             }
 
-            // LineageOS 19 (and the bundled SDK jar) expose exactly one setter:
-            //   public void setActiveProfile(UUID profileUuid)
-            // There is no setActiveProfile(Profile) and no setActiveProfile(String).
+
             Method getUuidMethod = profileClass.getMethod("getUuid");
             Object uuid = getUuidMethod.invoke(targetProfileObj);
 
@@ -123,7 +121,6 @@ public final class ProfileSwitcher {
                         "setActiveProfile", java.util.UUID.class);
                 setActiveUuid.invoke(profileManagerInstance, uuid);
             } catch (NoSuchMethodException e) {
-                // Only very old CM/Lineage builds still have the String variant
                 Method setActiveStr = profileManagerClass.getMethod(
                         "setActiveProfile", String.class);
                 setActiveStr.invoke(profileManagerInstance, profileName);
@@ -147,7 +144,6 @@ public final class ProfileSwitcher {
         }
     }
 
-    /** Reflection throws InvocationTargetException; the real cause is inside it. */
     private static Throwable unwrap(Throwable t) {
         if (t instanceof InvocationTargetException && t.getCause() != null) {
             return t.getCause();
