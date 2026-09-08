@@ -1,4 +1,4 @@
-package com.mine.autoprofile.ui;
+package com.mine.autoprofiles.ui;
 
 import android.Manifest;
 import android.content.Context;
@@ -24,12 +24,12 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import com.mine.autoprofile.R;
-import com.mine.autoprofile.database.AppDatabase;
-import com.mine.autoprofile.models.Rule;
-import com.mine.autoprofile.models.Trigger;
-import com.mine.autoprofile.services.TriggerMonitorService;
-import com.mine.autoprofile.utils.CellUtils;
+import com.mine.autoprofiles.R;
+import com.mine.autoprofiles.database.AppDatabase;
+import com.mine.autoprofiles.models.Rule;
+import com.mine.autoprofiles.models.Trigger;
+import com.mine.autoprofiles.services.TriggerMonitorService;
+import com.mine.autoprofiles.utils.CellUtils;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -341,7 +341,7 @@ public class LocationScanActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 // Poke the monitor so the new rule is evaluated right away
                 // (it may already match the cells around us)
-                if (com.mine.autoprofile.utils.ProfileSwitcher.isMasterEnabled(this)) {
+                if (com.mine.autoprofiles.utils.ProfileSwitcher.isMasterEnabled(this)) {
                     startService(new Intent(this, TriggerMonitorService.class));
                 }
                 Toast.makeText(this, isEditMode() ? "Rule Updated!" : "Location rule saved!",
