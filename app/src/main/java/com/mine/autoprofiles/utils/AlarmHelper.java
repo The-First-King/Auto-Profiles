@@ -1,4 +1,4 @@
-package com.mine.autoprofile.utils;
+package com.mine.autoprofiles.utils;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -6,8 +6,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
-import com.mine.autoprofile.models.Schedule;
-import com.mine.autoprofile.receivers.ScheduleReceiver;
+import com.mine.autoprofiles.models.Schedule;
+import com.mine.autoprofiles.receivers.ScheduleReceiver;
 
 public class AlarmHelper {
 
