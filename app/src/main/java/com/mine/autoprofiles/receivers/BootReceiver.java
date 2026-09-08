@@ -27,7 +27,6 @@ public class BootReceiver extends BroadcastReceiver {
                 List<FullRule> rules = db.ruleDao().getAllRulesWithDetails();
                 
                 for (FullRule fullRule : rules) {
-                    // Changed nullptr to standard Java null
                     if (fullRule.rule != null && fullRule.rule.isEnabled() && 
                         fullRule.trigger != null && "TIME".equals(fullRule.trigger.getType())) {
                         
