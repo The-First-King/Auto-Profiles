@@ -1,4 +1,4 @@
-package com.mine.autoprofile.ui;
+package com.mine.autoprofiles.ui;
 
 import android.Manifest;
 import android.app.AlarmManager;
@@ -20,13 +20,13 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.mine.autoprofile.R;
-import com.mine.autoprofile.database.AppDatabase;
-import com.mine.autoprofile.models.FullRule;
-import com.mine.autoprofile.models.Profile;
-import com.mine.autoprofile.services.TriggerMonitorService;
-import com.mine.autoprofile.utils.AlarmHelper;
-import com.mine.autoprofile.utils.ProfileSwitcher;
+import com.mine.autoprofiles.R;
+import com.mine.autoprofiles.database.AppDatabase;
+import com.mine.autoprofiles.models.FullRule;
+import com.mine.autoprofiles.models.Profile;
+import com.mine.autoprofiles.services.TriggerMonitorService;
+import com.mine.autoprofiles.utils.AlarmHelper;
+import com.mine.autoprofiles.utils.ProfileSwitcher;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
