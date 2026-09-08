@@ -35,18 +35,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
 
-/**
- * Criterion #1 scanner. Continuously collects the GSM/WCDMA/LTE/NR cells in
- * range while the user waits (or walks around the location), lists them live,
- * and on "Complete" asks for a rule name (up to 80 characters) and saves a
- * CELL rule. Also used to edit an existing location rule: the saved cells are
- * preloaded and scanning continues to add more.
- *
- * Note: Android only exposes cell identities while the system-wide Location
- * toggle is ON (LocationAccessPolicy returns DENIED_SOFT -> silent empty list
- * otherwise). GPS itself is never used. The activity checks the toggle and
- * prompts the user to enable it before scanning.
- */
 public class LocationScanActivity extends AppCompatActivity {
 
     private static final int REQ_LOCATION = 71;
@@ -137,8 +125,7 @@ public class LocationScanActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQ_LOCATION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -193,7 +180,6 @@ public class LocationScanActivity extends AppCompatActivity {
                 .show();
     }
 
-    // ------------------------------------------------------------- scanning
 
     private void startScanning() {
         if (scanning) return;
@@ -217,7 +203,6 @@ public class LocationScanActivity extends AppCompatActivity {
         }
 
         try {
-            // PRIORITY 1: getAllCellInfo() - most reliable on this device family
             List<CellInfo> cells = telephonyManager.getAllCellInfo();
             if (cells != null && !cells.isEmpty()) {
                 Log.d(TAG, "getAllCellInfo() returned " + cells.size() + " cells");
@@ -227,7 +212,6 @@ public class LocationScanActivity extends AppCompatActivity {
             Log.d(TAG, "getAllCellInfo() returned "
                     + (cells == null ? "null" : "empty list"));
 
-            // PRIORITY 2: ask the modem for a fresh measurement (API 29+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 telephonyManager.requestCellInfoUpdate(getMainExecutor(),
                         new TelephonyManager.CellInfoCallback() {
@@ -268,7 +252,6 @@ public class LocationScanActivity extends AppCompatActivity {
         btnComplete.setEnabled(!foundCells.isEmpty());
     }
 
-    // ---------------------------------------------------------------- save
 
     private void promptForNameAndSave() {
         if (foundCells.isEmpty()) {
@@ -284,8 +267,6 @@ public class LocationScanActivity extends AppCompatActivity {
             input.setSelection(existingName.length());
         }
 
-        // Wrap the field so it aligns with the dialog's own text padding
-        // instead of stretching edge-to-edge.
         FrameLayout container = new FrameLayout(this);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -339,8 +320,6 @@ public class LocationScanActivity extends AppCompatActivity {
             }
 
             runOnUiThread(() -> {
-                // Poke the monitor so the new rule is evaluated right away
-                // (it may already match the cells around us)
                 if (com.mine.autoprofiles.utils.ProfileSwitcher.isMasterEnabled(this)) {
                     startService(new Intent(this, TriggerMonitorService.class));
                 }
