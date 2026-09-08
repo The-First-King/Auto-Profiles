@@ -11,24 +11,6 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.temporal.TemporalAdjusters;
 
-/**
- * Pure occurrence math for {@link Schedule}. No Android dependencies, so the
- * logic is unit-testable on a plain JVM.
- *
- * The single entry point {@link #windows(Schedule, long)} answers everything the
- * alarm layer needs in one pass:
- *   [0] current window start  (-1 if "now" is not inside any occurrence)
- *   [1] current window end    (-1 likewise)
- *   [2] next start strictly after "now" (-1 if the schedule has no future starts)
- *   [3] earliest end after "now": the current window's end if inside one,
- *       otherwise the next window's end (-1 if none)
- *
- * COUNT termination is computed statelessly by enumerating occurrences from the
- * anchor, so no mutable occurrence counter has to be persisted anywhere.
- * Following RFC 5545 semantics: monthly rules skip months that lack the target
- * day (e.g. day 31 in February) and yearly Feb-29 rules skip non-leap years;
- * skipped dates do not consume a COUNT slot.
- */
 public final class ScheduleCalculator {
 
     private static final int MAX_ITERATIONS = 300_000;
@@ -70,8 +52,8 @@ public final class ScheduleCalculator {
 
             for (LocalDate d : candidates) {
                 if (++iterations > MAX_ITERATIONS) break outer;
-                if (d == null) continue;                 // invalid in this block (e.g. Feb 31)
-                if (d.isBefore(s.anchor)) continue;      // before the schedule begins (not counted)
+                if (d == null) continue;
+                if (d.isBefore(s.anchor)) continue;
 
                 // Termination checks (valid occurrences only)
                 if (s.term == Schedule.Term.UNTIL && d.isAfter(s.until)) break outer;
@@ -89,7 +71,6 @@ public final class ScheduleCalculator {
                 }
             }
 
-            // Hard horizon: nothing found within ~200 years of "now"
             LocalDate probe = blockAnchorDate(s, block);
             if (probe != null && probe.getYear() > LocalDate.now(zone).getYear() + 200) break;
         }
@@ -111,12 +92,7 @@ public final class ScheduleCalculator {
         return mins * 60_000L;
     }
 
-    /**
-     * The candidate occurrence dates of the given block, in chronological order.
-     * Block = one step of the recurrence: DAILY -> one date, WEEKLY -> one week,
-     * MONTHLY -> one month, YEARLY -> one year. Entries may be null when the
-     * block has no valid date (short month / non-leap year).
-     */
+
     private static LocalDate[] candidatesForBlock(Schedule s, int block) {
         switch (s.freq) {
             case DAILY:
