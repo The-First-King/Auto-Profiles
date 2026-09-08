@@ -1,4 +1,4 @@
-package com.mine.autoprofile.models;
+package com.mine.autoprofiles.models;
 
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
