@@ -1,14 +1,14 @@
-package com.mine.autoprofile.receivers;
+package com.mine.autoprofiles.receivers;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.util.Log;
-import com.mine.autoprofile.database.AppDatabase;
-import com.mine.autoprofile.models.Profile;
-import com.mine.autoprofile.utils.AlarmHelper;
-import com.mine.autoprofile.utils.ProfileSwitcher;
+import com.mine.autoprofiles.database.AppDatabase;
+import com.mine.autoprofiles.models.Profile;
+import com.mine.autoprofiles.utils.AlarmHelper;
+import com.mine.autoprofiles.utils.ProfileSwitcher;
 import java.util.concurrent.Executors;
 
 public class ScheduleReceiver extends BroadcastReceiver {
