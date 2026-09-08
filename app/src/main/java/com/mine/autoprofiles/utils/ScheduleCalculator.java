@@ -1,6 +1,6 @@
-package com.mine.autoprofile.utils;
+package com.mine.autoprofiles.utils;
 
-import com.mine.autoprofile.models.Schedule;
+import com.mine.autoprofiles.models.Schedule;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
