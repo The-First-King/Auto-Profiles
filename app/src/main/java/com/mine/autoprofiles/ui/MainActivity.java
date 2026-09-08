@@ -369,7 +369,7 @@ public class MainActivity extends AppCompatActivity {
 
             // Display the list in a dialog
             new AlertDialog.Builder(this)
-                    .setTitle("Select LineageOS Profile")
+                    .setTitle("Select the System Profile")
                     .setItems(profileNames, (dialog, which) -> {
                         String selectedProfileName = profileNames[which];
                         promptForTriggerType(selectedProfileName);
