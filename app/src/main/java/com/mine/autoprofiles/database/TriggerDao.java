@@ -1,10 +1,10 @@
-package com.mine.autoprofile.database;
+package com.mine.autoprofiles.database;
 
 import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
 import androidx.room.Update;
-import com.mine.autoprofile.models.Trigger;
+import com.mine.autoprofiles.models.Trigger;
 import java.util.List;
 
 @Dao
