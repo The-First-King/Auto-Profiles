@@ -1,12 +1,12 @@
-package com.mine.autoprofile.receivers;
+package com.mine.autoprofiles.receivers;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
-import com.mine.autoprofile.database.AppDatabase;
-import com.mine.autoprofile.models.FullRule;
-import com.mine.autoprofile.utils.AlarmHelper;
+import com.mine.autoprofiles.database.AppDatabase;
+import com.mine.autoprofiles.models.FullRule;
+import com.mine.autoprofiles.utils.AlarmHelper;
 import java.util.List;
 import java.util.concurrent.Executors;
 
@@ -16,7 +16,7 @@ public class BootReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)
                 || Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
-            if (!com.mine.autoprofile.utils.ProfileSwitcher.isMasterEnabled(context)) {
+            if (!com.mine.autoprofiles.utils.ProfileSwitcher.isMasterEnabled(context)) {
                 Log.i("AutoProfile", "Master switch OFF - not restoring alarms after: " + action);
                 return;
             }
