@@ -1,4 +1,4 @@
-package com.mine.autoprofile.ui;
+package com.mine.autoprofiles.ui;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
@@ -15,14 +15,14 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-import com.mine.autoprofile.R;
-import com.mine.autoprofile.database.AppDatabase;
-import com.mine.autoprofile.models.Rule;
-import com.mine.autoprofile.models.Schedule;
-import com.mine.autoprofile.models.Trigger;
-import com.mine.autoprofile.utils.AlarmHelper;
-import com.mine.autoprofile.utils.ProfileSwitcher;
-import com.mine.autoprofile.utils.ScheduleCalculator;
+import com.mine.autoprofiles.R;
+import com.mine.autoprofiles.database.AppDatabase;
+import com.mine.autoprofiles.models.Rule;
+import com.mine.autoprofiles.models.Schedule;
+import com.mine.autoprofiles.models.Trigger;
+import com.mine.autoprofiles.utils.AlarmHelper;
+import com.mine.autoprofiles.utils.ProfileSwitcher;
+import com.mine.autoprofiles.utils.ScheduleCalculator;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
