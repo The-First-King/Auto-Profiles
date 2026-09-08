@@ -34,12 +34,9 @@ import java.util.concurrent.Executors;
 public class ScheduleActivity extends AppCompatActivity {
 
     private long profileId;
-
-    // Edit mode: set when an existing rule is being modified (-1 = create mode)
     private long editRuleId = -1;
     private long editTriggerId = -1;
 
-    // ---- form state ----
     private LocalTime startTime = LocalTime.of(8, 0);
     private LocalTime endTime = LocalTime.of(17, 0);
     private LocalDate anchorDate = LocalDate.now();
@@ -67,7 +64,6 @@ public class ScheduleActivity extends AppCompatActivity {
     private static final String[] FREQ_LABELS = {"Daily", "Weekly", "Monthly", "Yearly"};
     private static final String[] FREQ_UNITS = {"day(s)", "week(s)", "month(s)", "year(s)"};
 
-    // ---- views ----
     private RadioButton rbOnce, rbRecurring, rbForever, rbUntil, rbCount;
     private View sectionOnce, sectionRecur, daysContainer;
     private Button btnOnceStartDate, btnOnceStartTime, btnOnceEndDate, btnOnceEndTime;
@@ -81,7 +77,6 @@ public class ScheduleActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_schedule);
 
-        // The layout has its own heading; hide any system ActionBar.
         if (getSupportActionBar() != null) {
             getSupportActionBar().hide();
         }
@@ -143,7 +138,6 @@ public class ScheduleActivity extends AppCompatActivity {
         RadioGroup rgType = findViewById(R.id.rg_event_type);
         rgType.setOnCheckedChangeListener((g, id) -> refreshSectionVisibility());
 
-        // Etar-style live limits: repeat interval 1..99, occurrence count 1..730.
         attachRangeClamp(etInterval, 99);
         attachRangeClamp(etCount, 730);
 
@@ -167,19 +161,12 @@ public class ScheduleActivity extends AppCompatActivity {
             @Override public void onNothingSelected(AdapterView<?> p) { }
         });
 
-        // The three termination radios live in a plain LinearLayout (a RadioGroup
-        // only manages direct children and broke re-selecting "Never"), so
-        // exclusivity is handled manually here.
         rbForever.setOnClickListener(v -> { rbUntil.setChecked(false); rbCount.setChecked(false); refreshTermEnabled(); });
         rbUntil.setOnClickListener(v -> { rbForever.setChecked(false); rbCount.setChecked(false); refreshTermEnabled(); });
         rbCount.setOnClickListener(v -> { rbForever.setChecked(false); rbUntil.setChecked(false); refreshTermEnabled(); });
     }
 
-    /**
-     * Keeps a numeric field within [1, max] while typing: "0" becomes "1" and
-     * anything above max becomes max. Emptying the field is allowed during
-     * editing; save-time parsing falls back to 1.
-     */
+
     private void attachRangeClamp(EditText field, int max) {
         field.addTextChangedListener(new android.text.TextWatcher() {
             private boolean updating = false;
@@ -207,7 +194,6 @@ public class ScheduleActivity extends AppCompatActivity {
         });
     }
 
-    // ------------------------------------------------------------ UI helpers
 
     private interface DateConsumer { void accept(LocalDate d); }
     private interface TimeConsumer { void accept(LocalTime t); }
@@ -269,7 +255,6 @@ public class ScheduleActivity extends AppCompatActivity {
         }
     }
 
-    // ------------------------------------------------------------ prefill
 
     private void prefill(Schedule s) {
         if (s.mode == Schedule.Mode.ONCE) {
@@ -301,8 +286,7 @@ public class ScheduleActivity extends AppCompatActivity {
         if (s.term == Schedule.Term.UNTIL) untilDate = s.until;
         if (s.term == Schedule.Term.COUNT) etCount.setText(String.valueOf(s.count));
     }
-
-    // ------------------------------------------------------------ save
+    
 
     private Schedule buildScheduleFromForm() {
         Schedule s = new Schedule();
@@ -397,19 +381,14 @@ public class ScheduleActivity extends AppCompatActivity {
             AppDatabase db = AppDatabase.getInstance(this);
 
             if (isEditMode()) {
-                // --- EDIT: update the existing trigger, keep the same rule id ---
-                // 1. Drop the old alarms; if the old window is applied right now,
-                //    restore the previous profile so no orphan state is left behind.
+
                 AlarmHelper.cancelAlarms(this, editRuleId);
                 ProfileSwitcher.revertIfActive(this, editRuleId);
 
-                // 2. Persist the new schedule
                 Trigger trigger = new Trigger("TIME", triggerValue);
                 trigger.setId(editTriggerId);
                 db.triggerDao().update(trigger);
 
-                // 3. Register alarms for the new schedule (fires immediately if
-                //    the new window covers the current time)
                 AlarmHelper.scheduleAlarm(this, editRuleId, profileId, triggerValue);
 
                 runOnUiThread(() -> {
@@ -417,7 +396,7 @@ public class ScheduleActivity extends AppCompatActivity {
                     finish();
                 });
             } else {
-                // --- CREATE ---
+
                 Trigger trigger = new Trigger("TIME", triggerValue);
                 long triggerId = db.triggerDao().insert(trigger);
 
