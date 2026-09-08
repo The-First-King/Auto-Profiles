@@ -48,10 +48,6 @@
             android:name=".services.ProfileManagerService"
             android:exported="false" />
 
-        <!-- Receivers -->
-        <!-- NOTE: CellTowerReceiver removed - TriggerMonitorService handles cell events correctly -->
-        <!-- The PHONE_STATE broadcast is for call events, not cell tower changes -->
-
         <receiver
             android:name=".receivers.ScheduleReceiver"
             android:exported="false" />
