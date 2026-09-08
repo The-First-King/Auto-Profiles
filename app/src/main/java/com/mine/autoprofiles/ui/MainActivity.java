@@ -83,13 +83,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Refresh the list of rules every time we return to this screen
         loadRulesFromDatabase();
-        // Re-register alarms for all enabled TIME rules. Installing a new APK over
-        // the old one CANCELS all previously set alarms, and BootReceiver only
-        // restores them after a reboot. This makes opening the app enough.
-        // Idempotent: same request codes + FLAG_UPDATE_CURRENT just replace the
-        // existing PendingIntents.
         registerAllAlarms();
     }
 
@@ -139,8 +133,6 @@ public class MainActivity extends AppCompatActivity {
             for (int i = 0; i < permissions.length; i++) {
                 if (Manifest.permission.ACCESS_FINE_LOCATION.equals(permissions[i])) {
                     if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                        // The monitor may already be running without a cell listener
-                        // (started before the grant) - poke it so it attaches one.
                         updateMonitorService(ProfileSwitcher.isMasterEnabled(this));
                     } else {
                         Toast.makeText(this,
@@ -173,8 +165,6 @@ public class MainActivity extends AppCompatActivity {
             // Bring the background monitor (and its notification) in line with the switch
             updateMonitorService(isChecked);
             if (isChecked) {
-                // Bring every enabled rule back to life (fires immediately for
-                // rules whose window covers the current time)
                 registerAllAlarms();
                 Toast.makeText(this, R.string.app_enabled, Toast.LENGTH_SHORT).show();
             } else {
@@ -198,7 +188,6 @@ public class MainActivity extends AppCompatActivity {
         if (recyclerView != null) {
             recyclerView.setLayoutManager(new LinearLayoutManager(this));
             
-            // Pass the interface listener we created in RuleAdapter
             ruleAdapter = new RuleAdapter(new RuleAdapter.OnRuleClickListener() {
                 @Override
                 public void onToggleRule(FullRule rule, boolean isChecked) {
@@ -218,8 +207,6 @@ public class MainActivity extends AppCompatActivity {
                             }
                         } else {
                             AlarmHelper.cancelAlarms(MainActivity.this, rule.rule.getId());
-                            // If the rule's window is applied right now, restore the
-                            // previous profile instead of leaving the phone stuck.
                             ProfileSwitcher.revertIfActive(MainActivity.this, rule.rule.getId());
                         }
                         runOnUiThread(() -> Toast.makeText(MainActivity.this,
@@ -321,12 +308,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void initProfileManager() {
         try {
-            // 1. Try standard reflection (works on older LineageOS versions)
             mProfileManagerClass = Class.forName("lineageos.app.ProfileManager");
             mProfileClass = Class.forName("lineageos.app.Profile");
         } catch (ClassNotFoundException e1) {
             try {
-                // 2. Fallback: Force-load the jar directly (bypasses Android 12 restrictions)
                 String libPath = "/system/framework/org.lineageos.platform.jar";
                 dalvik.system.DexClassLoader classLoader = new dalvik.system.DexClassLoader(
                         libPath, getCodeCacheDir().getAbsolutePath(), null, getClass().getClassLoader());
@@ -336,12 +321,11 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception e2) {
                 Log.e("AutoProfile", "DexClassLoader also failed to find the LineageOS jar.", e2);
                 mProfileManagerInstance = null;
-                return; // Stop here if both methods fail
+                return;
             }
         }
 
         try {
-            // 3. If the classes were found, initialize the ProfileManager
             Method getInstanceMethod = mProfileManagerClass.getMethod("getInstance", Context.class);
             mProfileManagerInstance = getInstanceMethod.invoke(null, this);
             Log.i("AutoProfile", "Successfully initialized LineageOS ProfileManager!");
@@ -420,10 +404,7 @@ public class MainActivity extends AppCompatActivity {
             .show();
     }
 
-    /**
-     * Fetches (or creates) the profile row in the local Room DB, then launches
-     * the given rule-editor activity with the resolved PROFILE_ID.
-     */
+
     private void resolveProfileIdThen(String profileName, Class<?> activityClass) {
         Executors.newSingleThreadExecutor().execute(() -> {
             AppDatabase db = AppDatabase.getInstance(MainActivity.this);
