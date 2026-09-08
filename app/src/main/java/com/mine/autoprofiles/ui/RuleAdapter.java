@@ -1,4 +1,4 @@
-package com.mine.autoprofile.ui;
+package com.mine.autoprofiles.ui;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -8,8 +8,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.recyclerview.widget.RecyclerView;
-import com.mine.autoprofile.R;
-import com.mine.autoprofile.models.FullRule;
+import com.mine.autoprofiles.R;
+import com.mine.autoprofiles.models.FullRule;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -93,12 +93,12 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
         if (fullRule.trigger == null) return "Trigger: ?";
         String value = fullRule.trigger.getValue();
         if ("CELL".equals(fullRule.trigger.getType())) {
-            int n = com.mine.autoprofile.utils.CellUtils.fromTriggerValue(value).size();
+            int n = com.mine.autoprofiles.utils.CellUtils.fromTriggerValue(value).size();
             return "Location: " + n + " cell tower" + (n == 1 ? "" : "s");
         }
         if (!"TIME".equals(fullRule.trigger.getType())) return "Trigger: " + value;
-        com.mine.autoprofile.models.Schedule schedule =
-                com.mine.autoprofile.models.Schedule.parse(value);
+        com.mine.autoprofiles.models.Schedule schedule =
+                com.mine.autoprofiles.models.Schedule.parse(value);
         return schedule != null ? schedule.describe() : "Trigger: " + value;
     }
 
