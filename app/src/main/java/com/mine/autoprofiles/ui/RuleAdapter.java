@@ -47,10 +47,6 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
     public void onBindViewHolder(@NonNull RuleViewHolder holder, int position) {
         FullRule fullRule = rules.get(position);
 
-        // 1. Set Rule Name (Since your Rule model doesn't have a name string, we can use the ID or trigger type)
-        // A user-given name wins (location rules); otherwise show a positional
-        // number (1..n) so the numbering has no gaps after deletions. The id
-        // remains the stable internal key for alarms and edits.
         String userName = fullRule.rule != null ? fullRule.rule.getName() : null;
         if (userName != null && !userName.trim().isEmpty()) {
             holder.ruleName.setText(userName);
@@ -58,23 +54,17 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
             holder.ruleName.setText("Rule #" + (position + 1) + " (" + fullRule.trigger.getType() + ")");
         }
 
-        // 2. Set Profile Name
-        // NOTE: Assuming your Profile.java model has a getName() method. If not, use String.valueOf(fullRule.profile.getId())
         if (fullRule.profile != null) {
             holder.ruleProfile.setText("Applies to: " + fullRule.profile.getName());
         } else {
             holder.ruleProfile.setText("Applies to: Unknown Profile");
         }
 
-        // 3. Set Trigger Info (human readable for TIME triggers)
         holder.ruleTriggerInfo.setText(formatTrigger(fullRule));
 
-        // 4. Set Switch State
-        // Remove listener temporarily so we don't trigger it while recycling views
         holder.ruleSwitch.setOnCheckedChangeListener(null); 
         holder.ruleSwitch.setChecked(fullRule.rule.isEnabled());
 
-        // 5. Re-attach Listeners
         holder.ruleSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (listener != null) listener.onToggleRule(fullRule, isChecked);
         });
@@ -88,7 +78,6 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
         });
     }
 
-    /** Human-readable schedule summary (supports both JSON and legacy trigger values). */
     private static String formatTrigger(FullRule fullRule) {
         if (fullRule.trigger == null) return "Trigger: ?";
         String value = fullRule.trigger.getValue();
@@ -117,7 +106,6 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
 
         public RuleViewHolder(@NonNull View itemView) {
             super(itemView);
-            // Mappings updated to match your new item_rule.xml exactly
             ruleName = itemView.findViewById(R.id.rule_name);
             ruleProfile = itemView.findViewById(R.id.rule_profile);
             ruleTriggerInfo = itemView.findViewById(R.id.rule_trigger_info);
