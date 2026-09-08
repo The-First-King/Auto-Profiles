@@ -1,9 +1,9 @@
-package com.mine.autoprofile.database;
+package com.mine.autoprofiles.database;
 
 import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
-import com.mine.autoprofile.models.Profile;
+import com.mine.autoprofiles.models.Profile;
 import java.util.List;
 
 @Dao
