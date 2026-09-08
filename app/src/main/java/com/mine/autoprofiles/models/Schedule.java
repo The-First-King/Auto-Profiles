@@ -1,4 +1,4 @@
-package com.mine.autoprofile.models;
+package com.mine.autoprofiles.models;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
