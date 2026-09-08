@@ -1,4 +1,4 @@
-package com.mine.autoprofile.utils;
+package com.mine.autoprofiles.utils;
 
 import android.content.Context;
 import android.util.Log;
