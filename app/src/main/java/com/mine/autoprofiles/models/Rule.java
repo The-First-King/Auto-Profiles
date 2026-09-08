@@ -11,8 +11,6 @@ public class Rule {
     private long profileId;
     private long triggerId;
     private boolean enabled;
-
-    /** Optional user-given name (introduced with location rules, DB v2). */
     private String name;
 
     public Rule(long profileId, long triggerId, boolean enabled) {
