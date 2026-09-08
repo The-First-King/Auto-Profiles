@@ -18,8 +18,7 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract ProfileDao profileDao();
     public abstract RuleDao ruleDao();
     public abstract TriggerDao triggerDao();
-
-    /** v1 -> v2: rules gain an optional user-given name (location rules). */
+    
     static final Migration MIGRATION_1_2 = new Migration(1, 2) {
         @Override
         public void migrate(@NonNull SupportSQLiteDatabase db) {
