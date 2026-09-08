@@ -33,24 +33,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * Foreground service implementing Criterion #1: listens for cell-tower changes
- * and matches the cells in range against every enabled CELL rule.
- *
- * Entering a location (any saved cell appears in range) behaves like a schedule
- * START: the current profile is remembered and the rule's profile applied.
- * Leaving (no saved cell in range anymore) behaves like an END: the remembered
- * profile is restored. The same revert keys as schedule rules are used, so the
- * master switch, per-rule toggle, edit and delete flows all work unchanged.
- *
- * Cell access notes:
- * - getAllCellInfo() is tried first; on some devices/ROMs (e.g. LineageOS 19.1
- *   on Galaxy S10) requestCellInfoUpdate() misbehaves while getAllCellInfo()
- *   works, so the update call is only a fallback.
- * - Android silently returns EMPTY cell lists whenever the system-wide
- *   Location toggle is off (cell ids count as location data). Evaluation is
- *   skipped in that state so rules are not wrongly treated as "left".
- */
 public class TriggerMonitorService extends Service {
     private static final String CHANNEL_ID = "AutoProfilesServiceChannel";
     private static final int NOTIFICATION_ID = 1337;
@@ -63,8 +45,8 @@ public class TriggerMonitorService extends Service {
     private boolean listening = false;
 
     // Kept as fields so the exact registered instances can be unregistered
-    private TelephonyCallback telephonyCallback;          // API 31+
-    private PhoneStateListener phoneStateListener;        // API 26-30
+    private TelephonyCallback telephonyCallback;
+    private PhoneStateListener phoneStateListener;
 
     private final Runnable periodicRefresh = new Runnable() {
         @Override
@@ -89,9 +71,6 @@ public class TriggerMonitorService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // Called on service start AND whenever the app pokes us (rule saved,
-        // rule toggled, permission granted): (re)attach the listener if we can,
-        // and evaluate the current cells right away.
         ensureListening();
         requestFreshCellInfo();
         return START_STICKY;
@@ -108,8 +87,6 @@ public class TriggerMonitorService extends Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
-
-    // ---------------------------------------------------------- cell events
 
     private boolean hasLocationPermission() {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -176,7 +153,6 @@ public class TriggerMonitorService extends Service {
         listening = false;
     }
 
-    /** API 31+ cell-change callback. */
     private class CellChangeCallback extends TelephonyCallback
             implements TelephonyCallback.CellInfoListener {
         @Override
@@ -193,7 +169,6 @@ public class TriggerMonitorService extends Service {
             return;
         }
         try {
-            // PRIORITY 1: getAllCellInfo() - most reliable on this device family
             List<CellInfo> cells = telephonyManager.getAllCellInfo();
             if (cells != null && !cells.isEmpty()) {
                 Log.d(TAG, "getAllCellInfo() returned " + cells.size() + " cells");
@@ -203,7 +178,6 @@ public class TriggerMonitorService extends Service {
             Log.d(TAG, "getAllCellInfo() returned "
                     + (cells == null ? "null" : "empty list"));
 
-            // PRIORITY 2: ask the modem for a fresh measurement (API 29+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 telephonyManager.requestCellInfoUpdate(getMainExecutor(),
                         new TelephonyManager.CellInfoCallback() {
@@ -221,7 +195,6 @@ public class TriggerMonitorService extends Service {
         }
     }
 
-    // ----------------------------------------------------------- evaluation
 
     private void evaluate(List<CellInfo> cellInfo) {
         // Null check BEFORE using cellInfo
@@ -229,8 +202,7 @@ public class TriggerMonitorService extends Service {
             Log.d(TAG, "evaluate: cellInfo is null, skipping evaluation");
             return;
         }
-        // While the Location toggle is off, the OS feeds us empty lists; acting
-        // on them would wrongly revert every active location rule.
+
         if (!isSystemLocationEnabled()) {
             Log.w(TAG, "evaluate: system Location off, skipping evaluation");
             return;
@@ -264,7 +236,6 @@ public class TriggerMonitorService extends Service {
                 boolean nowActive = !Collections.disjoint(ruleCells, inRange);
 
                 if (nowActive && !wasActive) {
-                    // ---- entered the location (START) ----
                     Log.i(TAG, "Rule " + ruleId + " (" + fullRule.rule.getName()
                             + "): location ENTERED");
                     prefs.edit().putBoolean(activeKey, true).apply();
@@ -281,11 +252,8 @@ public class TriggerMonitorService extends Service {
                                 + "' verified=" + ok);
                     }
                 } else if (!nowActive && wasActive) {
-                    // ---- left the location (END) ----
                     Log.i(TAG, "Rule " + ruleId + " (" + fullRule.rule.getName()
                             + "): location LEFT");
-                    // revertIfActive restores the remembered profile and clears
-                    // both the revert key and the cell-active flag.
                     ProfileSwitcher.revertIfActive(this, ruleId);
                 }
             }
