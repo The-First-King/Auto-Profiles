@@ -1,12 +1,12 @@
-package com.mine.autoprofile.database;
+package com.mine.autoprofiles.database;
 
 import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
 import androidx.room.Transaction;
 import androidx.room.Update;
-import com.mine.autoprofile.models.Rule;
-import com.mine.autoprofile.models.FullRule;
+import com.mine.autoprofiles.models.Rule;
+import com.mine.autoprofiles.models.FullRule;
 import java.util.List;
 
 @Dao
