@@ -1,4 +1,4 @@
-package com.mine.autoprofile.database;
+package com.mine.autoprofiles.database;
 
 import android.content.Context;
 import androidx.annotation.NonNull;
@@ -7,9 +7,9 @@ import androidx.room.Room;
 import androidx.room.RoomDatabase;
 import androidx.room.migration.Migration;
 import androidx.sqlite.db.SupportSQLiteDatabase;
-import com.mine.autoprofile.models.Profile;
-import com.mine.autoprofile.models.Rule;
-import com.mine.autoprofile.models.Trigger;
+import com.mine.autoprofiles.models.Profile;
+import com.mine.autoprofiles.models.Rule;
+import com.mine.autoprofiles.models.Trigger;
 
 @Database(entities = {Profile.class, Rule.class, Trigger.class}, version = 2, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
