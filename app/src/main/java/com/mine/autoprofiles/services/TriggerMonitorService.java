@@ -23,6 +23,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
+import com.mine.autoprofiles.R;
 import com.mine.autoprofiles.database.AppDatabase;
 import com.mine.autoprofiles.models.FullRule;
 import com.mine.autoprofiles.utils.CellUtils;
@@ -63,7 +64,7 @@ public class TriggerMonitorService extends Service {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("Auto Profiles")
                 .setContentText("Monitoring triggers in background...")
-                .setSmallIcon(android.R.drawable.ic_menu_compass)
+                .setSmallIcon(R.drawable.ic_service_notification)
                 .build();
         startForeground(NOTIFICATION_ID, notification);
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
