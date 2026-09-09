@@ -378,7 +378,7 @@ public class MainActivity extends AppCompatActivity {
                     .show();
 
         } catch (Exception e) {
-            Log.e("AutoProfile", "Error accessing LineageOS profiles", e);
+            Log.e("AutoProfile", "Error accessing LineageOS System Profiles", e);
             Toast.makeText(this, "Failed to load profiles (check logs)", Toast.LENGTH_SHORT).show();
         }
     }
