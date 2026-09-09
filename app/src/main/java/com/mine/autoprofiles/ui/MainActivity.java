@@ -337,7 +337,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void showProfileSelectionDialog() {
         if (mProfileManagerInstance == null) {
-            Toast.makeText(this, "LineageOS Profiles API is not available on this device.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "LineageOS System Profiles API is not available on this device", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -347,7 +347,7 @@ public class MainActivity extends AppCompatActivity {
             boolean isEnabled = (Boolean) isProfilesEnabledMethod.invoke(mProfileManagerInstance);
 
             if (!isEnabled) {
-                Toast.makeText(this, "LineageOS Profiles are not enabled.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "LineageOS System Profiles are not enabled", Toast.LENGTH_LONG).show();
                 return;
             }
 
@@ -356,7 +356,7 @@ public class MainActivity extends AppCompatActivity {
             Object[] profiles = (Object[]) getProfilesMethod.invoke(mProfileManagerInstance);
 
             if (profiles == null || profiles.length == 0) {
-                Toast.makeText(this, "No LineageOS profiles found.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "No LineageOS System profiles found", Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -379,7 +379,7 @@ public class MainActivity extends AppCompatActivity {
 
         } catch (Exception e) {
             Log.e("AutoProfile", "Error accessing LineageOS profiles", e);
-            Toast.makeText(this, "Failed to load profiles. Check logs.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Failed to load profiles (check logs)", Toast.LENGTH_SHORT).show();
         }
     }
 
