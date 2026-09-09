@@ -96,9 +96,14 @@ public class TriggerMonitorService extends Service {
         startForeground(NOTIFICATION_ID, notification);
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 
-        ContextCompat.registerReceiver(this, airplaneModeReceiver,
-                new IntentFilter(Intent.ACTION_AIRPLANE_MODE_CHANGED),
-                ContextCompat.RECEIVER_NOT_EXPORTED);
+        IntentFilter airplaneFilter = new IntentFilter(Intent.ACTION_AIRPLANE_MODE_CHANGED);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(airplaneModeReceiver, airplaneFilter,
+                    Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(airplaneModeReceiver, airplaneFilter);
+        }
+        
     }
 
     @Override
