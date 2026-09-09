@@ -392,7 +392,7 @@ public class ScheduleActivity extends AppCompatActivity {
                 AlarmHelper.scheduleAlarm(this, editRuleId, profileId, triggerValue);
 
                 runOnUiThread(() -> {
-                    Toast.makeText(this, "Rule Updated!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Rule updated", Toast.LENGTH_SHORT).show();
                     finish();
                 });
             } else {
@@ -406,7 +406,7 @@ public class ScheduleActivity extends AppCompatActivity {
                 AlarmHelper.scheduleAlarm(ScheduleActivity.this, ruleId, profileId, triggerValue);
 
                 runOnUiThread(() -> {
-                    Toast.makeText(this, "Rule Saved & Alarm Set!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Rule saved & alarm set", Toast.LENGTH_SHORT).show();
                     finish();
                 });
             }
