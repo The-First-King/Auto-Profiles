@@ -165,7 +165,7 @@ public class TriggerMonitorService extends Service {
     private void requestFreshCellInfo() {
         if (telephonyManager == null || !hasLocationPermission()) return;
         if (!isSystemLocationEnabled()) {
-            Log.w(TAG, "System Location is off: cell ids unavailable, skipping refresh");
+            Log.w(TAG, "System Location is off: cell IDs unavailable, skipping refresh.");
             return;
         }
         try {
