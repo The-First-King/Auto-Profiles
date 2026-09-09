@@ -5,8 +5,10 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
@@ -17,6 +19,7 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.telephony.CellInfo;
 import android.telephony.PhoneStateListener;
+import android.telephony.ServiceState;
 import android.telephony.TelephonyCallback;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -39,6 +42,8 @@ public class TriggerMonitorService extends Service {
     private static final int NOTIFICATION_ID = 1337;
     private static final String TAG = "AutoProfile";
     private static final long REFRESH_INTERVAL_MS = 60_000;
+    /** Delay before re-reading cells after the radio comes back (needs time to camp). */
+    private static final long RADIO_RECOVERY_DELAY_MS = 5_000;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -57,6 +62,28 @@ public class TriggerMonitorService extends Service {
         }
     };
 
+    /** Single deferred "radio is back, look again" kick; re-posting replaces the pending one. */
+    private final Runnable radioRecoveryKick = this::requestFreshCellInfo;
+
+    /**
+     * Airplane mode pauses monitoring entirely; when it turns OFF the radio
+     * needs several seconds to re-register, so schedule a couple of delayed
+     * refreshes instead of reading immediately.
+     */
+    private final BroadcastReceiver airplaneModeReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            boolean on = intent.getBooleanExtra("state", false);
+            Log.i(TAG, "Airplane mode " + (on ? "ON - cell monitoring paused"
+                    : "OFF - scheduling cell refresh"));
+            handler.removeCallbacks(radioRecoveryKick);
+            if (!on) {
+                handler.postDelayed(radioRecoveryKick, RADIO_RECOVERY_DELAY_MS);
+                handler.postDelayed(radioRecoveryKick, 30_000);
+            }
+        }
+    };
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -68,6 +95,10 @@ public class TriggerMonitorService extends Service {
                 .build();
         startForeground(NOTIFICATION_ID, notification);
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+
+        ContextCompat.registerReceiver(this, airplaneModeReceiver,
+                new IntentFilter(Intent.ACTION_AIRPLANE_MODE_CHANGED),
+                ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
@@ -80,6 +111,10 @@ public class TriggerMonitorService extends Service {
     @Override
     public void onDestroy() {
         handler.removeCallbacks(periodicRefresh);
+        handler.removeCallbacks(radioRecoveryKick);
+        try {
+            unregisterReceiver(airplaneModeReceiver);
+        } catch (Exception ignored) { }
         stopListening();
         super.onDestroy();
     }
@@ -110,6 +145,12 @@ public class TriggerMonitorService extends Service {
         return mode != Settings.Secure.LOCATION_MODE_OFF;
     }
 
+    /** Radio is off in airplane mode: no scans, and no state changes either. */
+    private boolean isAirplaneModeOn() {
+        return Settings.Global.getInt(getContentResolver(),
+                Settings.Global.AIRPLANE_MODE_ON, 0) != 0;
+    }
+
     @SuppressWarnings({"MissingPermission", "deprecation"})
     private void ensureListening() {
         if (listening) return;
@@ -128,8 +169,15 @@ public class TriggerMonitorService extends Service {
                     public void onCellInfoChanged(List<CellInfo> cellInfo) {
                         evaluate(cellInfo);
                     }
+
+                    @Override
+                    public void onServiceStateChanged(ServiceState serviceState) {
+                        onRadioStateChanged(serviceState);
+                    }
                 };
-                telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CELL_INFO);
+                telephonyManager.listen(phoneStateListener,
+                        PhoneStateListener.LISTEN_CELL_INFO
+                                | PhoneStateListener.LISTEN_SERVICE_STATE);
             }
             listening = true;
             // Cell callbacks can be sparse while stationary; refresh periodically too
@@ -154,17 +202,42 @@ public class TriggerMonitorService extends Service {
         listening = false;
     }
 
+    /**
+     * The radio just (re)gained service - after airplane mode, an elevator,
+     * a basement. The cached cell list may still be stale or empty, so read it
+     * again after the modem has had a moment to finish camping.
+     */
+    private void onRadioStateChanged(ServiceState serviceState) {
+        if (serviceState == null) return;
+        if (serviceState.getState() == ServiceState.STATE_IN_SERVICE) {
+            Log.i(TAG, "Radio IN_SERVICE - scheduling cell refresh");
+            handler.removeCallbacks(radioRecoveryKick);
+            handler.postDelayed(radioRecoveryKick, RADIO_RECOVERY_DELAY_MS);
+        }
+    }
+
+    /** API 31+ callbacks: cell list changes + radio service state. */
     private class CellChangeCallback extends TelephonyCallback
-            implements TelephonyCallback.CellInfoListener {
+            implements TelephonyCallback.CellInfoListener,
+                       TelephonyCallback.ServiceStateListener {
         @Override
         public void onCellInfoChanged(@NonNull List<CellInfo> cellInfo) {
             evaluate(cellInfo);
+        }
+
+        @Override
+        public void onServiceStateChanged(@NonNull ServiceState serviceState) {
+            onRadioStateChanged(serviceState);
         }
     }
 
     @SuppressWarnings("MissingPermission")
     private void requestFreshCellInfo() {
         if (telephonyManager == null || !hasLocationPermission()) return;
+        if (isAirplaneModeOn()) {
+            Log.d(TAG, "Airplane mode is on: skipping cell scan");
+            return;
+        }
         if (!isSystemLocationEnabled()) {
             Log.w(TAG, "System Location is off: cell IDs unavailable, skipping refresh.");
             return;
@@ -204,13 +277,28 @@ public class TriggerMonitorService extends Service {
             return;
         }
 
+        if (isAirplaneModeOn()) {
+            Log.d(TAG, "evaluate: airplane mode is on, keeping current state");
+            return;
+        }
+
         if (!isSystemLocationEnabled()) {
             Log.w(TAG, "evaluate: system Location off, skipping evaluation");
             return;
         }
 
         final Set<String> inRange = CellUtils.cellKeys(cellInfo);
-        Log.d(TAG, "evaluate: " + inRange.size() + " cells in range");
+
+        // An empty scan means the radio has NO DATA (restarting modem, dead
+        // zone, throttled reporting) - not that the user moved somewhere else.
+        // A genuine departure always shows a non-empty list of DIFFERENT
+        // cells. Freeze state instead of falsely reverting location rules.
+        if (inRange.isEmpty()) {
+            Log.d(TAG, "evaluate: no identifiable cells - keeping current state");
+            return;
+        }
+
+        Log.d(TAG, "evaluate: in range " + inRange);
 
         executor.execute(() -> {
             if (!ProfileSwitcher.isMasterEnabled(this)) return;
@@ -238,7 +326,7 @@ public class TriggerMonitorService extends Service {
 
                 if (nowActive && !wasActive) {
                     Log.i(TAG, "Rule " + ruleId + " (" + fullRule.rule.getName()
-                            + "): location ENTERED");
+                            + "): location ENTERED (saved " + ruleCells + ")");
                     prefs.edit().putBoolean(activeKey, true).apply();
                     String revertKey = ProfileSwitcher.REVERT_KEY_PREFIX + ruleId;
                     if (!prefs.contains(revertKey)) {
@@ -254,7 +342,8 @@ public class TriggerMonitorService extends Service {
                     }
                 } else if (!nowActive && wasActive) {
                     Log.i(TAG, "Rule " + ruleId + " (" + fullRule.rule.getName()
-                            + "): location LEFT");
+                            + "): location LEFT (saved " + ruleCells
+                            + " not among in-range " + inRange + ")");
                     ProfileSwitcher.revertIfActive(this, ruleId);
                 }
             }
