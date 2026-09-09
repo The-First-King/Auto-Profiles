@@ -323,7 +323,7 @@ public class LocationScanActivity extends AppCompatActivity {
                 if (com.mine.autoprofiles.utils.ProfileSwitcher.isMasterEnabled(this)) {
                     startService(new Intent(this, TriggerMonitorService.class));
                 }
-                Toast.makeText(this, isEditMode() ? "Rule Updated!" : "Location rule saved!",
+                Toast.makeText(this, isEditMode() ? "Rule updated" : "Location rule saved",
                         Toast.LENGTH_SHORT).show();
                 finish();
             });
