@@ -44,6 +44,9 @@ public class TriggerMonitorService extends Service {
     private static final long REFRESH_INTERVAL_MS = 60_000;
     /** Delay before re-reading cells after the radio comes back (needs time to camp). */
     private static final long RADIO_RECOVERY_DELAY_MS = 5_000;
+    /** Saved cells must be continuously absent this long before a rule counts as "left". */
+    private static final long LEAVE_GRACE_MS = 60_000;
+    private static final String CELL_MISS_SINCE_PREFIX = "cell_miss_since_";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -103,7 +106,6 @@ public class TriggerMonitorService extends Service {
         } else {
             registerReceiver(airplaneModeReceiver, airplaneFilter);
         }
-        
     }
 
     @Override
@@ -328,28 +330,52 @@ public class TriggerMonitorService extends Service {
 
                 Set<String> ruleCells = CellUtils.fromTriggerValue(fullRule.trigger.getValue());
                 boolean nowActive = !Collections.disjoint(ruleCells, inRange);
+                String missKey = CELL_MISS_SINCE_PREFIX + ruleId;
 
-                if (nowActive && !wasActive) {
-                    Log.i(TAG, "Rule " + ruleId + " (" + fullRule.rule.getName()
-                            + "): location ENTERED (saved " + ruleCells + ")");
-                    prefs.edit().putBoolean(activeKey, true).apply();
-                    String revertKey = ProfileSwitcher.REVERT_KEY_PREFIX + ruleId;
-                    if (!prefs.contains(revertKey)) {
-                        String current = ProfileSwitcher.getActiveProfileName(this);
-                        if (current != null) {
-                            prefs.edit().putString(revertKey, current).apply();
+                if (nowActive) {
+                    // Cells seen again - cancel any pending "left" countdown
+                    prefs.edit().remove(missKey).apply();
+                    if (!wasActive) {
+                        Log.i(TAG, "Rule " + ruleId + " (" + fullRule.rule.getName()
+                                + "): location ENTERED (saved " + ruleCells + ")");
+                        prefs.edit().putBoolean(activeKey, true).apply();
+                        String revertKey = ProfileSwitcher.REVERT_KEY_PREFIX + ruleId;
+                        if (!prefs.contains(revertKey)) {
+                            String current = ProfileSwitcher.getActiveProfileName(this);
+                            if (current != null) {
+                                prefs.edit().putString(revertKey, current).apply();
+                            }
+                        }
+                        if (fullRule.profile != null && fullRule.profile.getName() != null) {
+                            boolean ok = ProfileSwitcher.switchTo(this,
+                                    fullRule.profile.getName());
+                            Log.i(TAG, "ENTER switch to '" + fullRule.profile.getName()
+                                    + "' verified=" + ok);
                         }
                     }
-                    if (fullRule.profile != null && fullRule.profile.getName() != null) {
-                        boolean ok = ProfileSwitcher.switchTo(this, fullRule.profile.getName());
-                        Log.i(TAG, "ENTER switch to '" + fullRule.profile.getName()
-                                + "' verified=" + ok);
+                } else if (wasActive) {
+                    // Saved cells not visible; only count as "left" after the
+                    // absence has persisted - a single miss can be the radio
+                    // settling after Airplane mode or a transient handover.
+                    long missSince = prefs.getLong(missKey, 0);
+                    long now = System.currentTimeMillis();
+                    if (missSince == 0) {
+                        prefs.edit().putLong(missKey, now).apply();
+                        Log.i(TAG, "Rule " + ruleId + " (" + fullRule.rule.getName()
+                                + "): saved cells missing, starting "
+                                + (LEAVE_GRACE_MS / 1000) + "s grace period");
+                    } else if (now - missSince >= LEAVE_GRACE_MS) {
+                        Log.i(TAG, "Rule " + ruleId + " (" + fullRule.rule.getName()
+                                + "): location LEFT (saved " + ruleCells
+                                + " absent for " + ((now - missSince) / 1000)
+                                + "s, in range " + inRange + ")");
+                        prefs.edit().remove(missKey).apply();
+                        ProfileSwitcher.revertIfActive(this, ruleId);
+                    } else {
+                        Log.d(TAG, "Rule " + ruleId + ": still in grace period ("
+                                + ((now - missSince) / 1000) + "s of "
+                                + (LEAVE_GRACE_MS / 1000) + "s)");
                     }
-                } else if (!nowActive && wasActive) {
-                    Log.i(TAG, "Rule " + ruleId + " (" + fullRule.rule.getName()
-                            + "): location LEFT (saved " + ruleCells
-                            + " not among in-range " + inRange + ")");
-                    ProfileSwitcher.revertIfActive(this, ruleId);
                 }
             }
         });
