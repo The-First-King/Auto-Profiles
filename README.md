@@ -17,9 +17,12 @@ All rules are listed in the main window, where each one can be edited, deleted, 
 ## Screenshots
 
 <div align="center">
+  <img src="https://raw.githubusercontent.com/The-First-King/Auto-Profiles/refs/heads/main/metadata/en-US/images/phoneScreenshots/01.png" alt="App UI" width="405" />
+  <img src="https://raw.githubusercontent.com/The-First-King/Auto-Profiles/refs/heads/main/metadata/en-US/images/phoneScreenshots/02.png" alt="App UI" width="405" />
+  <img src="https://raw.githubusercontent.com/The-First-King/Auto-Profiles/refs/heads/main/metadata/en-US/images/phoneScreenshots/03.png" alt="App UI" width="405" />
   <img src="https://raw.githubusercontent.com/The-First-King/Auto-Profiles/refs/heads/main/metadata/en-US/images/phoneScreenshots/04.png" alt="App UI" width="405" />
   <img src="https://raw.githubusercontent.com/The-First-King/Auto-Profiles/refs/heads/main/metadata/en-US/images/phoneScreenshots/05.png" alt="App UI" width="405" />
-  <img src="https://raw.githubusercontent.com/The-First-King/Auto-Profiles/refs/heads/main/metadata/en-US/images/phoneScreenshots/09.png" alt="App UI" width="405" />
+  <img src="https://raw.githubusercontent.com/The-First-King/Auto-Profiles/refs/heads/main/metadata/en-US/images/phoneScreenshots/06.png" alt="App UI" width="405" />
 </div>
 
 ## Requirements
