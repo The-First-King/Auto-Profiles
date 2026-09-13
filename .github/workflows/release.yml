@@ -29,7 +29,7 @@ jobs:
           gradle-version: '8.7'
 
       - name: Build Release APK
-        run: gradle assembleDebug --warning-mode all
+        run: gradle assembleRelease --warning-mode all
 
       - name: Sign APK
         uses: r0adkll/sign-android-release@v1
@@ -50,7 +50,7 @@ jobs:
           raw_tag=${GITHUB_REF#refs/tags/}
           clean_tag="${raw_tag//./}"
           signed_file="${{ steps.sign_app.outputs.signedReleaseFile }}"
-          new_name="auto-off-bluetooth-${clean_tag}.apk"
+          new_name="auto-profiles-${clean_tag}.apk"
           mv "$signed_file" "app/build/outputs/apk/release/$new_name"
           echo "new_path=app/build/outputs/apk/release/$new_name" >> $GITHUB_OUTPUT
 
