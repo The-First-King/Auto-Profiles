@@ -17,7 +17,7 @@ All rules are listed in the main window, where each one can be edited, deleted, 
 ## Screenshots
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/The-First-King/Auto-Profiles/refs/heads/development/metadata/en-US/images/phoneScreenshots/09.png" alt="App UI" width="405" />
+  <img src="https://raw.githubusercontent.com/The-First-King/Auto-Profiles/refs/heads/main/metadata/en-US/images/phoneScreenshots/09.png" alt="App UI" width="405" />
 </div>
 
 ## Requirements
@@ -29,10 +29,12 @@ All rules are listed in the main window, where each one can be edited, deleted, 
 ## Permissions
 
 * **Location (precise)**: required by Android to read cell tower identities, which are treated as location data. GPS is not used.
+* **Location (coarse)**: fallback location data used alongside precise location for cell tower identification.
 * **Phone**: to read the cellular network state.
 * **Network state**: to access network information.
 * **Run at startup**: to restore rule monitoring and alarms after a reboot.
 * **Foreground service**: to keep monitoring cell changes reliably in the background.
+* **Foreground service (location)**: specialized permission to run a foreground service that monitors location-based triggers (Android 14+).
 * **Alarms & reminders**: to switch profiles at the exact scheduled time (Android 12+).
 * **Notifications**: for the persistent monitoring notification (Android 13+).
 * **Modify profiles** (`lineageos.permission.MODIFY_PROFILES`): to switch LineageOS System Profiles.
