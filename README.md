@@ -6,11 +6,11 @@ Set up a rule once, and your phone changes its profile on its own: silent at the
 
 ## How it works
 
-The app relies on the System Profiles feature built into LineageOS. Tap the **+** button, pick one of your existing system profiles, and choose how it should be triggered:
+The app relies on the System Profiles feature built into LineageOS. Tap the **+** button, select an existing system profile, and choose how it should be triggered:
 
-**Location (GSM)** — the profile is activated when you are at a specific place (office, gym, home). Location is determined by the GSM/LTE cell towers in range, not by GPS, so it works indoors and consumes no extra battery. When you create the rule, the app scans and collects the cells around you — walk around the location to capture all nearby towers, then tap **Complete** and give the rule a name. When any of the saved cells later appears in range, the profile is applied and your previous profile is remembered; when you leave the coverage area, the previous profile is restored.
+**Location (GSM)** — activates the profile when you are at a specific place (such as your office, gym, or home). Location is determined by nearby GSM/LTE cell towers rather than GPS, allowing it to work indoors without consuming extra battery. When creating the rule, the app scans and collects surrounding cells — walk around the location to capture all nearby towers, then tap **Complete** and name the rule. When any saved cell comes into range, the profile is applied and your previous profile is remembered. Leaving the coverage area automatically restores the previous profile.
 
-**Schedule** — the profile is activated for a time interval you set (for example, from midnight until 7 o'clock). At the start of the interval the profile is applied, and at the end the previous profile is restored.
+**Schedule** — activates the profile during a set time interval (for example, from midnight to 7 o'clock). At the start of the interval the profile is applied, and at the end the previous profile is restored.
 
 All rules are listed in the main window, where each one can be edited, deleted, or toggled on and off individually. A master switch in the app bar disables the whole app at once, reverting any profile it applied. A foreground service monitors cell tower changes in the background and survives reboots.
 
