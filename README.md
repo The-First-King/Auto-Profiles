@@ -1,6 +1,6 @@
 # Auto Profiles
 
-Auto Profiles is a lightweight utility for LineageOS that switches System Profiles automatically, based on rules you define. It brings the functionality of Handy Profiles — a popular app for Nokia smartphones originally developed by SymbianWare — to Android.
+Auto Profiles is a lightweight utility for **LineageOS** that switches System Profiles automatically, based on rules you define. It brings the functionality of Handy Profiles — a popular app for Nokia smartphones originally developed by SymbianWare — to Android.
 
 Set up a rule once, and your phone changes its profile on its own: silent at the office, loud at home, offline at night.
 
