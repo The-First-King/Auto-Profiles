@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
@@ -66,6 +67,11 @@ public class MainActivity extends AppCompatActivity {
         // On Android 14 (targetSdk 34) SCHEDULE_EXACT_ALARM is DENIED by default.
         // Without it, schedule rules never fire precisely (or, previously, at all).
         ensureExactAlarmPermission();
+
+        // Doze defers the monitor's periodic refresh and can throttle cell
+        // callbacks exactly when the phone sits idle. Ask once for the
+        // "Unrestricted" battery exemption; no-op once granted.
+        ensureBatteryExemption();
 
         // Initialize the RecyclerView for displaying saved rules
         setupRecyclerView();
@@ -187,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView recyclerView = findViewById(R.id.recycler_view);
         if (recyclerView != null) {
             recyclerView.setLayoutManager(new LinearLayoutManager(this));
-            
+
             ruleAdapter = new RuleAdapter(new RuleAdapter.OnRuleClickListener() {
                 @Override
                 public void onToggleRule(FullRule rule, boolean isChecked) {
@@ -304,6 +310,32 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .setNegativeButton("Later", null)
                 .show();
+    }
+
+    /**
+     * Asks the system to exclude the app from battery optimization
+     * ("Unrestricted"). Doze otherwise defers the monitor's periodic cell
+     * refresh and can throttle telephony callbacks precisely when the phone
+     * is stationary with the screen off. Shows the one-tap system dialog;
+     * once granted this is a permanent no-op.
+     */
+    private void ensureBatteryExemption() {
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (pm == null || pm.isIgnoringBatteryOptimizations(getPackageName())) {
+            return;
+        }
+        try {
+            // System dialog: "Allow Auto Profiles to always run in background?"
+            Intent intent = new Intent(
+                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
+        } catch (Exception e) {
+            Log.e("AutoProfile", "Battery exemption request failed, opening list instead", e);
+            try {
+                startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+            } catch (Exception ignored) { }
+        }
     }
 
     private void initProfileManager() {
