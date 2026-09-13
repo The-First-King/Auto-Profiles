@@ -1,137 +1,55 @@
 # Auto Profiles
 
-An Android application for LineageOS that automatically switches system profiles based on user-defined rules and triggers.
+Auto Profiles is a lightweight utility for LineageOS that switches System Profiles automatically, based on rules you define. It brings the functionality of Handy Profiles — a popular app for Nokia smartphones originally developed by SymbianWare — to Android.
 
-## Features
+Set up a rule once, and your phone changes its profile on its own: silent at the office, loud at home, offline at night.
 
-- **Profile Management**: Create and manage multiple device profiles
-- **Trigger System**: Automate profile switching with multiple trigger types:
-  - Time-based triggers (specific times and days)
-  - Cell tower-based triggers (location-based)
-  - Calendar event triggers
-  - Recurring day patterns (weekdays, weekends, custom)
-- **Rule Management**: Define rules that link triggers to profiles
-- **Background Monitoring**: Continuous trigger monitoring with minimal battery impact
-- **Notifications**: Get notified when profiles are activated
+## How it works
 
-## Architecture
+The app relies on the System Profiles feature built into LineageOS. Tap the **+** button, pick one of your existing system profiles, and choose how it should be triggered:
 
-### Core Components
+**Location (GSM)** — the profile is activated when you are at a specific place (office, gym, home). Location is determined by the GSM/LTE cell towers in range, not by GPS, so it works indoors and consumes no extra battery. When you create the rule, the app scans and collects the cells around you — walk around the location to capture all nearby towers, then tap **Complete** and give the rule a name. When any of the saved cells later appears in range, the profile is applied and your previous profile is remembered; when you leave the coverage area, the previous profile is restored.
 
-- **ProfileManagerService**: Manages profile activation and system integration
-- **TriggerMonitorService**: Monitors various triggers
-- **Receivers**: Handle broadcast events for triggers
-- **Database Layer**: Room-based persistence for profiles, rules, and triggers
+**Schedule** — the profile is activated for a time interval you set (for example, from midnight until 7 o'clock). At the start of the interval the profile is applied, and at the end the previous profile is restored.
 
-### Data Models
+All rules are listed in the main window, where each one can be edited, deleted, or toggled on and off individually. A master switch in the app bar disables the whole app at once, reverting any profile it applied. A foreground service monitors cell tower changes in the background and survives reboots.
 
-- **Profile**: Represents a device profile configuration
-- **Rule**: Links one or more triggers to a profile
-- **Trigger**: Represents a condition that should activate a profile
+## Screenshots
 
-## LineageOS Profile API
+<div align="center">
+  <img src="https://raw.githubusercontent.com/The-First-King/Auto-Profiles/refs/heads/main/metadata/en-US/images/phoneScreenshots/04.png" alt="App UI" width="405" />
+  <img src="https://raw.githubusercontent.com/The-First-King/Auto-Profiles/refs/heads/main/metadata/en-US/images/phoneScreenshots/05.png" alt="App UI" width="405" />
+  <img src="https://raw.githubusercontent.com/The-First-King/Auto-Profiles/refs/heads/main/metadata/en-US/images/phoneScreenshots/09.png" alt="App UI" width="405" />
+</div>
 
-The app uses the LineageOS SDK `ProfileManager` API to:
+## Requirements
 
-```java
-// Get instance
-ProfileManager pm = ProfileManager.getInstance(context);
+* LineageOS with the System Profiles feature (Settings → System → Profiles) enabled.
 
-// Set active profile by UUID
-pm.setActiveProfile(profileUuid);
+> **Note:** Android only reveals cell tower identities to apps while the system-wide **Location** toggle is on. Auto Profiles never uses GPS — the toggle is only the policy gate that makes cell information visible. If Location is off, the app will ask you to enable it.
 
-// Get active profile
-Profile activeProfile = pm.getActiveProfile();
+## Permissions
 
-// Manage profiles
-pm.addProfile(profile);
-pm.updateProfile(profile);
-pm.removeProfile(profile);
-```
+* **Location (precise)**: required by Android to read cell tower identities, which are treated as location data. GPS is not used.
+* **Location (coarse)**: fallback location data used alongside precise location for cell tower identification.
+* **Phone**: to read the cellular network state.
+* **Network state**: to access network information.
+* **Run at startup**: to restore rule monitoring and alarms after a reboot.
+* **Foreground service**: to keep monitoring cell changes reliably in the background.
+* **Foreground service (location)**: specialized permission to run a foreground service that monitors location-based triggers (Android 14+).
+* **Alarms & reminders**: to switch profiles at the exact scheduled time (Android 12+).
+* **Notifications**: for the persistent monitoring notification (Android 13+).
+* **Modify profiles** (`lineageos.permission.MODIFY_PROFILES`): to switch LineageOS System Profiles.
 
-### Key API Methods
+## Installation & License
 
-- `setActiveProfile(UUID profileUuid)` - Activate a profile
-- `getActiveProfile()` - Get currently active profile
-- `addProfile(Profile profile)` - Add new profile
-- `updateProfile(Profile profile)` - Update existing profile
-- `removeProfile(Profile profile)` - Remove profile
+<a href="https://github.com/The-First-King/Auto-Profiles/releases"><img src="images/GitHub.png" alt="Get it on GitHub" height="60"></a>
+<a href="https://apt.izzysoft.de/packages/com.mine.autoprofiles"><img src="images/IzzyOnDroid.png" alt="Get it at IzzyOnDroid" height="60"></a>
 
-### Permissions Required
+---
 
-Add to `AndroidManifest.xml`:
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-```xml
-<uses-permission android:name="lineageos.permission.MANAGE_REMOTE_PREFERENCES" />
-```
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-## Project Structure
-
-```
-AutoProfiles/
-├── app/src/main/
-│   ├── java/com/mine/autoprofiles/
-│   │   ├── models/
-│   │   │   ├── Profile.java
-│   │   │   ├── Rule.java
-│   │   │   └── Trigger.java
-│   │   ├── database/
-│   │   │   ├── AppDatabase.java
-│   │   │   ├── ProfileDao.java
-│   │   │   ├── RuleDao.java
-│   │   │   └── TriggerDao.java
-│   │   ├── services/
-│   │   │   ├── ProfileManagerService.java
-│   │   │   └─��� TriggerMonitorService.java
-│   │   ├── receivers/
-│   │   │   ├── BootCompletedReceiver.java
-│   │   │   ├── CellTowerReceiver.java
-│   │   │   └── ScheduleReceiver.java
-│   │   └── ui/
-│   │       └── MainActivity.java
-│   └── res/
-│       ├── layout/
-│       ├── drawable/
-│       └── values/
-└── build.gradle
-```
-
-## Next Steps
-
-1. **Implement UI Fragments**:
-   - ProfileListFragment: Display and manage profiles
-   - RuleListFragment: Display and manage rules
-   - SettingsFragment: Configure app behavior
-
-2. **Implement Trigger Engines**:
-   - TimeBasedTriggerEngine
-   - CellTowerTriggerEngine
-   - CalendarTriggerEngine
-   - RecurringTriggerEngine
-
-3. **Implement Profile Integration**:
-   - LineageOS ProfileManager API integration
-   - Profile settings synchronization
-
-4. **Implement Background Services**:
-   - Continuous trigger monitoring
-   - Battery-optimized task scheduling
-   - Notification system
-
-## Building
-
-```bash
-./gradlew build
-./gradlew installDebug
-```
-
-## Testing
-
-```bash
-./gradlew test
-./gradlew connectedAndroidTest
-```
-
-## License
-
-GNU General Public License v3.0
+---

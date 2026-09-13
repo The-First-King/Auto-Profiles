@@ -1,4 +1,4 @@
-package com.mine.autoprofile.models;
+package com.mine.autoprofiles.models;
 
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
@@ -11,6 +11,7 @@ public class Rule {
     private long profileId;
     private long triggerId;
     private boolean enabled;
+    private String name;
 
     public Rule(long profileId, long triggerId, boolean enabled) {
         this.profileId = profileId;
@@ -29,4 +30,7 @@ public class Rule {
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 }

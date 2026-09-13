@@ -1,4 +1,4 @@
-package com.mine.autoprofile.ui;
+package com.mine.autoprofiles.ui;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -8,8 +8,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.recyclerview.widget.RecyclerView;
-import com.mine.autoprofile.R;
-import com.mine.autoprofile.models.FullRule;
+import com.mine.autoprofiles.R;
+import com.mine.autoprofiles.models.FullRule;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,26 +47,24 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
     public void onBindViewHolder(@NonNull RuleViewHolder holder, int position) {
         FullRule fullRule = rules.get(position);
 
-        // 1. Set Rule Name (Since your Rule model doesn't have a name string, we can use the ID or trigger type)
-        holder.ruleName.setText("Rule #" + fullRule.rule.getId() + " (" + fullRule.trigger.getType() + ")");
+        String userName = fullRule.rule != null ? fullRule.rule.getName() : null;
+        if (userName != null && !userName.trim().isEmpty()) {
+            holder.ruleName.setText(userName);
+        } else {
+            holder.ruleName.setText("Rule #" + (position + 1));
+        }
 
-        // 2. Set Profile Name
-        // NOTE: Assuming your Profile.java model has a getName() method. If not, use String.valueOf(fullRule.profile.getId())
         if (fullRule.profile != null) {
             holder.ruleProfile.setText("Applies to: " + fullRule.profile.getName());
         } else {
             holder.ruleProfile.setText("Applies to: Unknown Profile");
         }
 
-        // 3. Set Trigger Info (human readable for TIME triggers)
         holder.ruleTriggerInfo.setText(formatTrigger(fullRule));
 
-        // 4. Set Switch State
-        // Remove listener temporarily so we don't trigger it while recycling views
         holder.ruleSwitch.setOnCheckedChangeListener(null); 
         holder.ruleSwitch.setChecked(fullRule.rule.isEnabled());
 
-        // 5. Re-attach Listeners
         holder.ruleSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (listener != null) listener.onToggleRule(fullRule, isChecked);
         });
@@ -80,32 +78,17 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
         });
     }
 
-    /** Turns "08:00-17:00|2,3,4,5,6" into "08:00-17:00 on Mon, Tue, Wed, Thu, Fri". */
     private static String formatTrigger(FullRule fullRule) {
         if (fullRule.trigger == null) return "Trigger: ?";
         String value = fullRule.trigger.getValue();
-        if (!"TIME".equals(fullRule.trigger.getType())) return "Trigger: " + value;
-        try {
-            String[] parts = value.split("\\|");
-            // Mark which Calendar days (1=Sun ... 7=Sat) are selected
-            boolean[] selected = new boolean[8];
-            for (String d : parts[1].split(",")) {
-                selected[Integer.parseInt(d.trim())] = true;
-            }
-            // Render Monday-first: Mon(2) ... Sat(7), then Sun(1) last
-            String[] dayNames = {"", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-            int[] displayOrder = {2, 3, 4, 5, 6, 7, 1};
-            StringBuilder days = new StringBuilder();
-            for (int day : displayOrder) {
-                if (selected[day]) {
-                    if (days.length() > 0) days.append(", ");
-                    days.append(dayNames[day]);
-                }
-            }
-            return parts[0] + " on " + days;
-        } catch (Exception e) {
-            return "Trigger: " + value;
+        if ("CELL".equals(fullRule.trigger.getType())) {
+            int n = com.mine.autoprofiles.utils.CellUtils.fromTriggerValue(value).size();
+            return "Location: " + n + " cell tower" + (n == 1 ? "" : "s");
         }
+        if (!"TIME".equals(fullRule.trigger.getType())) return "Trigger: " + value;
+        com.mine.autoprofiles.models.Schedule schedule =
+                com.mine.autoprofiles.models.Schedule.parse(value);
+        return schedule != null ? schedule.describe() : "Trigger: " + value;
     }
 
     @Override
@@ -123,7 +106,6 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
 
         public RuleViewHolder(@NonNull View itemView) {
             super(itemView);
-            // Mappings updated to match your new item_rule.xml exactly
             ruleName = itemView.findViewById(R.id.rule_name);
             ruleProfile = itemView.findViewById(R.id.rule_profile);
             ruleTriggerInfo = itemView.findViewById(R.id.rule_trigger_info);

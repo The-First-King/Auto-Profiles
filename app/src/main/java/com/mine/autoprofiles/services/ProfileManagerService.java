@@ -1,10 +1,10 @@
-package com.mine.autoprofile.services;
+package com.mine.autoprofiles.services;
 
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
-import com.mine.autoprofile.utils.ProfileSwitcher;
+import com.mine.autoprofiles.utils.ProfileSwitcher;
 
 public class ProfileManagerService extends Service {
 

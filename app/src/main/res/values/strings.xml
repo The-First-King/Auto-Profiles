@@ -17,8 +17,8 @@
     
     <!-- Rules and Triggers -->
     <string name="add_rule">Add Rule</string>
-    <string name="edit_rule">Edit Rule</string>
-    <string name="delete_rule">Delete Rule</string>
+    <string name="edit_rule">Edit</string>
+    <string name="delete_rule">Delete</string>
     <string name="rule_name">Rule Name</string>
     <string name="trigger_type">Trigger Type</string>
     <string name="trigger_time">Time-based</string>
@@ -77,7 +77,7 @@
     <!-- Errors and Messages -->
     <string name="error_profile_name_empty">Profile name cannot be empty</string>
     <string name="error_no_trigger">Please add at least one trigger</string>
-    <string name="error_lineage_not_available">LineageOS Profiles not available on this device</string>
+    <string name="error_lineage_not_available">LineageOS System Profiles are not available on this device</string>
     <string name="success_profile_created">Profile created successfully</string>
     <string name="success_profile_updated">Profile updated successfully</string>
     <string name="success_rule_created">Rule created successfully</string>

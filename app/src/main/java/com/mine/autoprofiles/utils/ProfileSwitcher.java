@@ -1,4 +1,4 @@
-package com.mine.autoprofile.utils;
+package com.mine.autoprofiles.utils;
 
 import android.content.Context;
 import android.util.Log;
@@ -15,6 +15,8 @@ public final class ProfileSwitcher {
     public static final String PREF_NAME = "AutoProfilePrefs";
     public static final String REVERT_KEY_PREFIX = "revert_profile_rule_";
     public static final String MASTER_ENABLED_KEY = "master_enabled";
+    /** Per-rule flag: this CELL rule's location is currently considered "entered". */
+    public static final String CELL_ACTIVE_KEY_PREFIX = "cell_active_rule_";
     private static final String TAG = "AutoProfile";
 
     private ProfileSwitcher() {}
@@ -40,6 +42,8 @@ public final class ProfileSwitcher {
         android.content.SharedPreferences prefs =
                 context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         String key = REVERT_KEY_PREFIX + ruleId;
+        // A CELL rule being reverted is by definition no longer "entered"
+        prefs.edit().remove(CELL_ACTIVE_KEY_PREFIX + ruleId).apply();
         String profileToRevert = prefs.getString(key, null);
         if (profileToRevert != null) {
             Log.i(TAG, "Rule " + ruleId + " removed/changed mid-window - reverting to '"
@@ -108,9 +112,7 @@ public final class ProfileSwitcher {
                 return false;
             }
 
-            // LineageOS 19 (and the bundled SDK jar) expose exactly one setter:
-            //   public void setActiveProfile(UUID profileUuid)
-            // There is no setActiveProfile(Profile) and no setActiveProfile(String).
+
             Method getUuidMethod = profileClass.getMethod("getUuid");
             Object uuid = getUuidMethod.invoke(targetProfileObj);
 
@@ -119,7 +121,6 @@ public final class ProfileSwitcher {
                         "setActiveProfile", java.util.UUID.class);
                 setActiveUuid.invoke(profileManagerInstance, uuid);
             } catch (NoSuchMethodException e) {
-                // Only very old CM/Lineage builds still have the String variant
                 Method setActiveStr = profileManagerClass.getMethod(
                         "setActiveProfile", String.class);
                 setActiveStr.invoke(profileManagerInstance, profileName);
@@ -143,7 +144,6 @@ public final class ProfileSwitcher {
         }
     }
 
-    /** Reflection throws InvocationTargetException; the real cause is inside it. */
     private static Throwable unwrap(Throwable t) {
         if (t instanceof InvocationTargetException && t.getCause() != null) {
             return t.getCause();

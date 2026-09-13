@@ -17,61 +17,301 @@
         android:text="Set Schedule"
         android:textSize="24sp"
         android:textStyle="bold"
-        android:layout_marginBottom="24dp"/>
+        android:layout_marginBottom="16dp"/>
 
-    <!-- Time Pickers -->
-    <LinearLayout
+    <!-- ============ Event type ============ -->
+    <RadioGroup
+        android:id="@+id/rg_event_type"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="24dp">
+        android:layout_marginBottom="16dp">
 
-        <Button
-            android:id="@+id/btn_start_time"
+        <RadioButton
+            android:id="@+id/rb_once"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Start: 08:00"
-            android:layout_marginEnd="8dp"/>
+            android:text="One-time" />
 
-        <Button
-            android:id="@+id/btn_end_time"
+        <RadioButton
+            android:id="@+id/rb_recurring"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="End: 17:00"
-            android:layout_marginStart="8dp"/>
-    </LinearLayout>
+            android:checked="true"
+            android:text="Recurring" />
+    </RadioGroup>
 
-    <!-- Days of the Week -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Repeat on days:"
-        android:textSize="16sp"
-        android:layout_marginBottom="8dp"/>
-
+    <!-- ============ ONE-TIME section ============ -->
     <LinearLayout
+        android:id="@+id/section_once"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginBottom="32dp">
+        android:visibility="gone"
+        android:layout_marginBottom="8dp">
 
-        <CheckBox android:id="@+id/chk_mon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/monday" android:textSize="16sp" />
-        <CheckBox android:id="@+id/chk_tue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/tuesday" android:textSize="16sp" />
-        <CheckBox android:id="@+id/chk_wed" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/wednesday" android:textSize="16sp" />
-        <CheckBox android:id="@+id/chk_thu" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/thursday" android:textSize="16sp" />
-        <CheckBox android:id="@+id/chk_fri" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/friday" android:textSize="16sp" />
-        <CheckBox android:id="@+id/chk_sat" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/saturday" android:textSize="16sp" />
-        <CheckBox android:id="@+id/chk_sun" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/sunday" android:textSize="16sp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="From"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <Button
+                android:id="@+id/btn_once_start_date"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:layout_marginEnd="8dp"
+                android:text="Date" />
+
+            <Button
+                android:id="@+id/btn_once_start_time"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:text="Time" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="To"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/btn_once_end_date"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="3"
+                android:layout_marginEnd="8dp"
+                android:text="Date" />
+
+            <Button
+                android:id="@+id/btn_once_end_time"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:text="Time" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ============ RECURRING section ============ -->
+    <LinearLayout
+        android:id="@+id/section_recur"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="8dp">
+
+        <!-- Daily window -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <Button
+                android:id="@+id/btn_start_time"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Start: 08:00"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/btn_end_time"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="End: 17:00"/>
+        </LinearLayout>
+
+        <!-- Anchor date -->
+        <Button
+            android:id="@+id/btn_anchor_date"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:text="Starts on: today" />
+
+        <!-- Frequency + interval -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Repeat"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp"/>
+
+        <Spinner
+            android:id="@+id/spinner_freq"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Every"
+                android:layout_marginEnd="8dp"/>
+
+            <EditText
+                android:id="@+id/et_interval"
+                android:layout_width="35dp"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:gravity="center"
+                android:maxLength="2"
+                android:text="1"
+                android:layout_marginEnd="8dp"/>
+
+            <TextView
+                android:id="@+id/tv_interval_unit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="day(s)"/>
+        </LinearLayout>
+
+        <!-- Weekly: day-of-week list -->
+        <LinearLayout
+            android:id="@+id/days_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Repeat on days"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+
+            <CheckBox android:id="@+id/chk_mon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/monday" android:textSize="16sp" />
+            <CheckBox android:id="@+id/chk_tue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/tuesday" android:textSize="16sp" />
+            <CheckBox android:id="@+id/chk_wed" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/wednesday" android:textSize="16sp" />
+            <CheckBox android:id="@+id/chk_thu" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/thursday" android:textSize="16sp" />
+            <CheckBox android:id="@+id/chk_fri" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/friday" android:textSize="16sp" />
+            <CheckBox android:id="@+id/chk_sat" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/saturday" android:textSize="16sp" />
+            <CheckBox android:id="@+id/chk_sun" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/sunday" android:textSize="16sp" />
+        </LinearLayout>
+
+        <!-- Monthly / yearly hint -->
+        <TextView
+            android:id="@+id/tv_freq_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Termination -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ends"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp"/>
+
+        <!-- Not a RadioGroup: two of the radios are nested in rows, and RadioGroup
+             only manages DIRECT children, which made "Never" unselectable after
+             switching away. Exclusivity is handled in ScheduleActivity instead. -->
+        <LinearLayout
+            android:id="@+id/rg_term"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/rb_forever"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="Never (no expiration)" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <RadioButton
+                    android:id="@+id/rb_until"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="On date" />
+
+                <Button
+                    android:id="@+id/btn_until_date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:enabled="false"
+                    android:layout_marginStart="8dp"
+                    android:text="Pick date" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <RadioButton
+                    android:id="@+id/rb_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="After" />
+
+                <EditText
+                    android:id="@+id/et_count"
+                    android:layout_width="40dp"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:gravity="center"
+                    android:maxLength="3"
+                    android:enabled="false"
+                    android:text="1"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="occurrence(s)"/>
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 
     <Button
         android:id="@+id/btn_save_rule"
         android:layout_width="match_parent"
         android:layout_height="60dp"
+        android:layout_marginTop="16dp"
         android:text="Save Rule"
-        android:textSize="18sp"
+        android:textColor="@color/white"
         android:backgroundTint="@color/colorPrimary" />
 
 </LinearLayout>
