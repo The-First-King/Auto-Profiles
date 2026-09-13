@@ -18,6 +18,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.Lifecycle;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -41,6 +42,15 @@ public class MainActivity extends AppCompatActivity {
 
     private RuleAdapter ruleAdapter;
 
+    // Sequential permission flow
+
+    private static final int STEP_RUNTIME_PERMS = 0;
+    private static final int STEP_EXACT_ALARM = 1;
+    private static final int STEP_BATTERY = 2;
+
+    /** Next step to run in onResume after the user returns from Settings; -1 = none. */
+    private int pendingPermissionStep = -1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,18 +70,8 @@ public class MainActivity extends AppCompatActivity {
         // Initialize the LineageOS Profile Manager via Reflection & DexClassLoader
         initProfileManager();
 
-        // Runtime permissions: without location the cell scanner and monitor can't
-        // work; ask right at first launch as requested.
-        ensureRuntimePermissions();
-
-        // On Android 14 (targetSdk 34) SCHEDULE_EXACT_ALARM is DENIED by default.
-        // Without it, schedule rules never fire precisely (or, previously, at all).
-        ensureExactAlarmPermission();
-
-        // Doze defers the monitor's periodic refresh and can throttle cell
-        // callbacks exactly when the phone sits idle. Ask once for the
-        // "Unrestricted" battery exemption; no-op once granted.
-        ensureBatteryExemption();
+        // Ask for everything the app needs, one prompt at a time.
+        startPermissionStep(STEP_RUNTIME_PERMS);
 
         // Initialize the RecyclerView for displaying saved rules
         setupRecyclerView();
@@ -91,6 +91,91 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         loadRulesFromDatabase();
         registerAllAlarms();
+
+        // Continue the permission flow if a step was waiting for the user to
+        // come back from a Settings screen.
+        if (pendingPermissionStep != -1) {
+            int step = pendingPermissionStep;
+            pendingPermissionStep = -1;
+            startPermissionStep(step);
+        }
+    }
+
+    /** Runs one step of the permission flow; steps advance each other. */
+    private void startPermissionStep(int step) {
+        switch (step) {
+            case STEP_RUNTIME_PERMS: {
+                List<String> needed = new ArrayList<>();
+                for (String perm : new String[]{
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.READ_PHONE_STATE}) {
+                    if (ContextCompat.checkSelfPermission(this, perm)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        needed.add(perm);
+                    }
+                }
+                if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this,
+                        "android.permission.POST_NOTIFICATIONS")
+                        != PackageManager.PERMISSION_GRANTED) {
+                    needed.add("android.permission.POST_NOTIFICATIONS");
+                }
+                if (!needed.isEmpty()) {
+                    // Flow continues in onRequestPermissionsResult()
+                    ActivityCompat.requestPermissions(this, needed.toArray(new String[0]),
+                            REQ_RUNTIME_PERMS);
+                    return;
+                }
+                startPermissionStep(STEP_EXACT_ALARM);
+                break;
+            }
+
+            case STEP_EXACT_ALARM: {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                    startPermissionStep(STEP_BATTERY);
+                    return;
+                }
+                AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+                if (alarmManager == null || alarmManager.canScheduleExactAlarms()) {
+                    startPermissionStep(STEP_BATTERY);
+                    return;
+                }
+                AlertDialog dialog = new AlertDialog.Builder(this)
+                        .setTitle("Permission needed")
+                        .setMessage("Auto Profiles needs the \"Alarms & reminders\" permission "
+                                + "to switch profiles at the exact scheduled time. Without it, "
+                                + "switching may be delayed by several minutes.")
+                        .setPositiveButton("Open Settings", (d, which) -> {
+                            Intent intent = new Intent(
+                                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                    Uri.parse("package:" + getPackageName()));
+                            startActivity(intent);
+                        })
+                        .setNegativeButton("Later", null)
+                        .create();
+                // Advance on ANY outcome (Settings, Later, back button)
+                dialog.setOnDismissListener(d -> continueAfterDialog(STEP_BATTERY));
+                dialog.show();
+                break;
+            }
+
+            case STEP_BATTERY: {
+                ensureBatteryExemption();
+                break;
+            }
+        }
+    }
+
+    /**
+     * Advances the flow after a dialog closes. If the user navigated away
+     * (e.g. to a Settings screen), the next step is deferred to onResume so
+     * its prompt doesn't appear on top of Settings.
+     */
+    private void continueAfterDialog(int nextStep) {
+        if (getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)) {
+            startPermissionStep(nextStep);
+        } else {
+            pendingPermissionStep = nextStep;
+        }
     }
 
     /** Registers alarms for every enabled TIME rule (no-op when the master switch is off). */
@@ -110,25 +195,9 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int REQ_RUNTIME_PERMS = 42;
 
-    /** Requests the dangerous permissions the app needs, on first launch. */
+    /** Re-entry point used by promptForTriggerType() when location is missing. */
     private void ensureRuntimePermissions() {
-        List<String> needed = new ArrayList<>();
-        for (String perm : new String[]{
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.READ_PHONE_STATE}) {
-            if (ContextCompat.checkSelfPermission(this, perm)
-                    != PackageManager.PERMISSION_GRANTED) {
-                needed.add(perm);
-            }
-        }
-        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this,
-                "android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
-            needed.add("android.permission.POST_NOTIFICATIONS");
-        }
-        if (!needed.isEmpty()) {
-            ActivityCompat.requestPermissions(this, needed.toArray(new String[0]),
-                    REQ_RUNTIME_PERMS);
-        }
+        startPermissionStep(STEP_RUNTIME_PERMS);
     }
 
     @Override
@@ -147,6 +216,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
+            // Runtime permissions answered - move on to the next prompt
+            startPermissionStep(STEP_EXACT_ALARM);
         }
     }
 
@@ -290,26 +361,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         });
-    }
-
-    private void ensureExactAlarmPermission() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return;
-
-        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        if (alarmManager == null || alarmManager.canScheduleExactAlarms()) return;
-
-        new AlertDialog.Builder(this)
-                .setTitle("Permission needed")
-                .setMessage("Auto Profiles needs the \"Alarms & reminders\" permission to switch "
-                        + "profiles at the exact scheduled time. Without it, switching may be "
-                        + "delayed by several minutes.")
-                .setPositiveButton("Open Settings", (dialog, which) -> {
-                    Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                            Uri.parse("package:" + getPackageName()));
-                    startActivity(intent);
-                })
-                .setNegativeButton("Later", null)
-                .show();
     }
 
     /**
