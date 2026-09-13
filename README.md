@@ -16,12 +16,6 @@ All rules are listed in the main window, where each one can be edited, deleted, 
 
 ## Screenshots
 
-<p align="center">
-  <img src="screenshots/main.png" width="250" alt="Main window with rules"/>
-  <img src="screenshots/scan.png" width="250" alt="Location rule scanner"/>
-  <img src="screenshots/schedule.png" width="250" alt="Schedule rule editor"/>
-</p>
-
 <div align="center">
   <img src="https://raw.githubusercontent.com/The-First-King/Auto-Profiles/refs/heads/development/metadata/en-US/images/phoneScreenshots/09.png" alt="App UI" width="405" />
 </div>
