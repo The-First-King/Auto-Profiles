@@ -22,6 +22,10 @@ All rules are listed in the main window, where each one can be edited, deleted, 
   <img src="screenshots/schedule.png" width="250" alt="Schedule rule editor"/>
 </p>
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/The-First-King/Auto-Profiles/refs/heads/development/metadata/en-US/images/phoneScreenshots/09.png" alt="App UI" width="405" />
+</div>
+
 ## Requirements
 
 * LineageOS with the System Profiles feature (Settings → System → Profiles) enabled.
