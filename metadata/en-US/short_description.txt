@@ -1,1 +1,1 @@
-
+Auto Profiles is a lightweight utility for LineageOS that switches System Profiles automatically.
