@@ -51,7 +51,7 @@ public class RuleAdapter extends RecyclerView.Adapter<RuleAdapter.RuleViewHolder
         if (userName != null && !userName.trim().isEmpty()) {
             holder.ruleName.setText(userName);
         } else {
-            holder.ruleName.setText("Rule #" + (position + 1) + " (" + fullRule.trigger.getType() + ")");
+            holder.ruleName.setText("Rule #" + (position + 1));
         }
 
         if (fullRule.profile != null) {
