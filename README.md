@@ -47,7 +47,7 @@ All rules are listed in the main window, where each one can be edited, deleted, 
 ## Installation & License
 
 <a href="https://github.com/The-First-King/Auto-Profiles/releases"><img src="images/GitHub.png" alt="Get it on GitHub" height="60"></a>
-<a href="https://apt.izzysoft.de/packages/com.mine.autoprofiles"><img src="images/IzzyOnDroid.png" alt="Get it at IzzyOnDroid" height="60"></a>
+<a href="https://f-droid.org/ru/packages/com.mine.autoprofiles"><img src="images/F-Droid.png" alt="Get it on IzzyOnDroid" height="60"></a>
 
 ---
 
