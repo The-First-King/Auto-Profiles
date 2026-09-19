@@ -54,9 +54,6 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-livedata:2.6.1'
     annotationProcessor 'androidx.lifecycle:lifecycle-compiler:2.6.1'
 
-    // LineageOS SDK (Maven)
-    compileOnly "org.lineageos.platform:platform-sdk:1.0"
-
     // Testing
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
