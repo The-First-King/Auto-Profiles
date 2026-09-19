@@ -26,19 +26,12 @@ android {
         targetCompatibility JavaVersion.VERSION_11
     }
 
-    // This resolves the duplicate META-INF file error during the build
     packagingOptions {
         exclude 'META-INF/androidx.lifecycle_lifecycle-livedata-core.version'
     }
 }
 
 dependencies {
-    // Grab all JARs EXCEPT the LineageOS SDK
-    implementation fileTree(dir: 'libs', include: ['*.jar'], exclude: ['org.lineageos.platform.jar'])
-    
-    // Add the LineageOS SDK strictly for compilation
-    compileOnly files('libs/org.lineageos.platform.jar')
-
     // AndroidX
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
@@ -52,7 +45,7 @@ dependencies {
     implementation 'androidx.room:room-runtime:2.5.2'
     annotationProcessor 'androidx.room:room-compiler:2.5.2'
 
-    // WorkManager for background tasks
+    // WorkManager
     implementation 'androidx.work:work-runtime:2.8.1'
 
     // Lifecycle
@@ -60,6 +53,9 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-viewmodel:2.6.1'
     implementation 'androidx.lifecycle:lifecycle-livedata:2.6.1'
     annotationProcessor 'androidx.lifecycle:lifecycle-compiler:2.6.1'
+
+    // LineageOS SDK (Maven)
+    compileOnly "org.lineageos.platform:platform-sdk:1.0"
 
     // Testing
     testImplementation 'junit:junit:4.13.2'
