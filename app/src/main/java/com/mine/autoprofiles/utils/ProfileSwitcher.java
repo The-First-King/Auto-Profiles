@@ -258,14 +258,11 @@ public final class ProfileSwitcher {
     }
 
     /**
-     * Loads the LineageOS classes through normal class loading.
-     *
-     * DexClassLoader is deliberately not used because F-Droid's source
-     * scanner rejects dynamic loading of executable code from a system path.
-     *
-     * On non-LineageOS devices, Class.forName() fails and this method returns
-     * null. Callers then treat the ProfileManager API as unavailable.
-     */
+    * Loads the LineageOS classes through normal class loading.
+    *
+    * On non-LineageOS devices, Class.forName() fails and this method returns
+    * null. Callers then treat the ProfileManager API as unavailable.
+    */
     private static Object[] getLineageClasses(Context context) {
         try {
             Class<?> profileManagerClass =
