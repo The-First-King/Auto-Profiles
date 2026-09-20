@@ -506,13 +506,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Initializes the LineageOS ProfileManager through normal class loading.
-     *
-     * F-Droid rejects DexClassLoader because it dynamically loads executable
-     * code from a system path. On non-LineageOS devices, the classes are not
-     * available and the feature is disabled gracefully.
-     */
+   /**
+   * Initializes the LineageOS ProfileManager through normal class loading.
+   *
+   * On non-LineageOS devices, the classes are not available and the feature
+   * is disabled gracefully.
+   */
     private void initProfileManager() {
         try {
             mProfileManagerClass =
