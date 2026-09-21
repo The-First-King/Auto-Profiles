@@ -24,7 +24,7 @@
         android:theme="@style/AppTheme">
 
         <!-- LineageOS Framework Library -->
-        <uses-library android:name="org.lineageos.platform" android:required="true" />
+        <uses-library android:name="org.lineageos.platform" android:required="false" />
 
         <!-- Activities -->
         <activity
