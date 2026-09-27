@@ -1,10 +1,11 @@
-pluginManagement {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-    }
+// Top-level build file - minimal configuration
+// Most configuration is in settings.gradle and module-specific build.gradle files
+
+plugins {
+    id 'com.android.application' version '8.5.2' apply false
+    id 'com.android.library' version '8.5.2' apply false
 }
 
-include ':app'
-include ':lineage-sdk'
+tasks.register('clean', Delete) {
+    delete rootProject.buildDir
+}
