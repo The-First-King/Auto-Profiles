@@ -47,6 +47,9 @@ dependencies {
     // Material Design
     implementation 'com.google.android.material:material:1.10.0'
 
+    // LineageOS SDK (built from source)
+    implementation project(':lineage-sdk')
+
     // Room Database
     implementation 'androidx.room:room-runtime:2.5.2'
     annotationProcessor 'androidx.room:room-compiler:2.5.2'
