@@ -17,7 +17,6 @@
 package lineageos.app;
 
 import android.os.Parcel;
-import android.os.ParcelUuid;
 import android.os.Parcelable;
 import java.util.UUID;
 
@@ -31,7 +30,9 @@ public class Profile implements Parcelable {
     }
 
     protected Profile(Parcel in) {
-        mUuid = ParcelUuid.unmarshall(in);
+        long mostSigBits = in.readLong();
+        long leastSigBits = in.readLong();
+        mUuid = new UUID(mostSigBits, leastSigBits);
         mName = in.readString();
     }
 
@@ -54,7 +55,8 @@ public class Profile implements Parcelable {
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        ParcelUuid.writeToParcel(new ParcelUuid(mUuid), dest);
+        dest.writeLong(mUuid.getMostSignificantBits());
+        dest.writeLong(mUuid.getLeastSignificantBits());
         dest.writeString(mName);
     }
 
