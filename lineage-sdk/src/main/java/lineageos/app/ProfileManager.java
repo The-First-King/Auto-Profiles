@@ -17,6 +17,7 @@
 package lineageos.app;
 
 import android.content.Context;
+import android.os.ParcelUuid;
 import android.os.RemoteException;
 import android.util.Log;
 import java.util.UUID;
@@ -60,7 +61,7 @@ public class ProfileManager {
         try {
             IProfileManager service = getService();
             if (service != null) {
-                return service.setActiveProfile(profileUuid);
+                return service.setActiveProfile(new ParcelUuid(profileUuid));
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Error setting active profile", e);
@@ -72,7 +73,7 @@ public class ProfileManager {
         try {
             IProfileManager service = getService();
             if (service != null) {
-                return service.getProfile(uuid);
+                return service.getProfile(new ParcelUuid(uuid));
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Error getting profile", e);
@@ -92,15 +93,16 @@ public class ProfileManager {
         return new Profile[0];
     }
 
-    public void addProfile(Profile profile) {
+    public boolean addProfile(Profile profile) {
         try {
             IProfileManager service = getService();
             if (service != null) {
-                service.addProfile(profile);
+                return service.addProfile(profile);
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Error adding profile", e);
         }
+        return false;
     }
 
     public void updateProfile(Profile profile) {
@@ -114,14 +116,15 @@ public class ProfileManager {
         }
     }
 
-    public void removeProfile(Profile profile) {
+    public boolean removeProfile(Profile profile) {
         try {
             IProfileManager service = getService();
             if (service != null) {
-                service.removeProfile(profile);
+                return service.removeProfile(profile);
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Error removing profile", e);
         }
+        return false;
     }
 }
