@@ -129,20 +129,6 @@ public final class RingModeSettings implements Parcelable {
     }
 
     /** @hide */
-    public void processOverride(Context context) {
-        if (isOverride()) {
-            int ringerMode = AudioManager.RINGER_MODE_NORMAL;
-            if (mValue.equals(RING_MODE_MUTE)) {
-                ringerMode = AudioManager.RINGER_MODE_SILENT;
-            } else if (mValue.equals(RING_MODE_VIBRATE)) {
-                ringerMode = AudioManager.RINGER_MODE_VIBRATE;
-            }
-            AudioManager amgr = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-            amgr.setRingerModeInternal(ringerMode);
-        }
-    }
-
-    /** @hide */
     public static RingModeSettings fromXml(XmlPullParser xpp, Context context)
             throws XmlPullParserException, IOException {
         int event = xpp.next();

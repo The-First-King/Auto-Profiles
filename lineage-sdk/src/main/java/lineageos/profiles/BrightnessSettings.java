@@ -127,33 +127,6 @@ public final class BrightnessSettings implements Parcelable {
     }
 
     /** @hide */
-    public void processOverride(Context context) {
-        if (isOverride()) {
-            final boolean automatic = Settings.System.getInt(context.getContentResolver(),
-                    Settings.System.SCREEN_BRIGHTNESS_MODE,
-                    Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
-                    == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC;
-            if (automatic) {
-                final float current = Settings.System.getFloat(context.getContentResolver(),
-                        Settings.System.SCREEN_AUTO_BRIGHTNESS_ADJ, -2f);
-                // Convert from [0, 255] to [-1, 1] for SCREEN_AUTO_BRIGHTNESS_ADJ
-                final float adj = mValue / (255 / 2f) - 1;
-                if (current != adj) {
-                    Settings.System.putFloat(context.getContentResolver(),
-                            Settings.System.SCREEN_AUTO_BRIGHTNESS_ADJ, adj);
-                }
-            } else {
-                final int current = Settings.System.getInt(context.getContentResolver(),
-                        Settings.System.SCREEN_BRIGHTNESS, -1);
-                if (current != mValue) {
-                    Settings.System.putInt(context.getContentResolver(),
-                            Settings.System.SCREEN_BRIGHTNESS, mValue);
-                }
-            }
-        }
-    }
-
-    /** @hide */
     public static BrightnessSettings fromXml(XmlPullParser xpp, Context context)
             throws XmlPullParserException, IOException {
         int event = xpp.next();
