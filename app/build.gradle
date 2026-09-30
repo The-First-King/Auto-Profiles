@@ -36,7 +36,9 @@ android {
     packagingOptions {
         resources {
             excludes += [
-                    'META-INF/androidx.lifecycle_lifecycle-livedata-core.version'
+                'META-INF/androidx.lifecycle_lifecycle-livedata-core.version',
+                'assets/dexopt/baseline.prof',
+                'assets/dexopt/baseline.profm'
             ]
         }
     }
