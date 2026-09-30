@@ -158,16 +158,8 @@ public final class ProfileSwitcher {
             profileManagerClass = Class.forName("lineageos.app.ProfileManager");
             profileClass = Class.forName("lineageos.app.Profile");
         } catch (ClassNotFoundException e1) {
-            try {
-                String libPath = "/system/framework/org.lineageos.platform.jar";
-                dalvik.system.DexClassLoader classLoader = new dalvik.system.DexClassLoader(
-                        libPath, context.getCodeCacheDir().getAbsolutePath(), null, context.getClassLoader());
-                profileManagerClass = classLoader.loadClass("lineageos.app.ProfileManager");
-                profileClass = classLoader.loadClass("lineageos.app.Profile");
-            } catch (Exception e2) {
-                Log.e(TAG, "Failed to load LineageOS classes", e2);
-                return null;
-            }
+            Log.e(TAG, "lineageos.app classes not found (device has no LineageOS Profiles API)", e1);
+            return null;
         }
 
         try {
