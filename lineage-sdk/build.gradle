@@ -1,0 +1,29 @@
+repositories {
+    google()
+    mavenCentral()
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'org.lineageos.platform'
+    compileSdkVersion 34
+
+    defaultConfig {
+        minSdkVersion 26
+        targetSdkVersion 34
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    buildFeatures {
+        aidl = true
+    }
+}
+
+dependencies {
+    // No dependencies needed for the framework API
+}
