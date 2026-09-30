@@ -67,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
         // The background monitor runs only while the master switch is ON
         updateMonitorService(ProfileSwitcher.isMasterEnabled(this));
 
-        // Initialize the LineageOS Profile Manager via Reflection & DexClassLoader
+        // Initialize the LineageOS Profile Manager via reflection
         initProfileManager();
 
         // Ask for everything the app needs, one prompt at a time.
@@ -394,18 +394,9 @@ public class MainActivity extends AppCompatActivity {
             mProfileManagerClass = Class.forName("lineageos.app.ProfileManager");
             mProfileClass = Class.forName("lineageos.app.Profile");
         } catch (ClassNotFoundException e1) {
-            try {
-                String libPath = "/system/framework/org.lineageos.platform.jar";
-                dalvik.system.DexClassLoader classLoader = new dalvik.system.DexClassLoader(
-                        libPath, getCodeCacheDir().getAbsolutePath(), null, getClass().getClassLoader());
-
-                mProfileManagerClass = classLoader.loadClass("lineageos.app.ProfileManager");
-                mProfileClass = classLoader.loadClass("lineageos.app.Profile");
-            } catch (Exception e2) {
-                Log.e("AutoProfile", "DexClassLoader also failed to find the LineageOS jar.", e2);
-                mProfileManagerInstance = null;
-                return;
-            }
+            Log.e("AutoProfile", "lineageos.app classes not found (device has no LineageOS Profiles API)", e1);
+            mProfileManagerInstance = null;
+            return;
         }
 
         try {
