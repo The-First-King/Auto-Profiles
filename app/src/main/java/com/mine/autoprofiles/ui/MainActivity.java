@@ -42,37 +42,32 @@ public class MainActivity extends AppCompatActivity {
 
     private RuleAdapter ruleAdapter;
 
-    // Sequential permission flow
+    // Permissions are requested per rule type, only when actually needed.
 
-    private static final int STEP_RUNTIME_PERMS = 0;
-    private static final int STEP_BACKGROUND_LOCATION = 1;
-    private static final int STEP_EXACT_ALARM = 2;
-    private static final int STEP_BATTERY = 3;
+    private static final int REQ_RUNTIME_PERMS = 42;
+    private static final int REQ_BACKGROUND_LOCATION = 43;
+    private static final int REQ_NOTIFICATIONS = 44;
 
-    /** Next step to run in onResume after the user returns from Settings; -1 = none. */
-    private int pendingPermissionStep = -1;
+    private Runnable pendingPermissionResultAction = null;
+    private Runnable pendingResumeAction = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // The layout has its own green title bar (app_bar_container). Hide the
-        // system ActionBar so the title is never shown twice, regardless of
-        // which theme the build ends up applying.
         if (getSupportActionBar() != null) {
             getSupportActionBar().hide();
         }
 
-        // Start background monitoring service when app opens
-        // The background monitor runs only while the master switch is ON
+        // Start background monitoring service when app opens. The background monitor runs only while the master switch is ON
         updateMonitorService(ProfileSwitcher.isMasterEnabled(this));
 
         // Initialize the LineageOS Profile Manager via reflection
         initProfileManager();
 
-        // Ask for everything the app needs, one prompt at a time.
-        startPermissionStep(STEP_RUNTIME_PERMS);
+        // The foreground monitor posts a notification whenever the master switch is ON, regardless of which rule types exist, so this one is always asked at launch.
+        ensureNotificationPermission(this::ensurePermissionsForExistingRules);
 
         // Initialize the RecyclerView for displaying saved rules
         setupRecyclerView();
@@ -93,120 +88,153 @@ public class MainActivity extends AppCompatActivity {
         loadRulesFromDatabase();
         registerAllAlarms();
 
-        // Continue the permission flow if a step was waiting for the user to
-        // come back from a Settings screen.
-        if (pendingPermissionStep != -1) {
-            int step = pendingPermissionStep;
-            pendingPermissionStep = -1;
-            startPermissionStep(step);
+        // Continue a flow that sent the user to a Settings screen.
+        if (pendingResumeAction != null) {
+            Runnable action = pendingResumeAction;
+            pendingResumeAction = null;
+            action.run();
         }
     }
 
-    /** Runs one step of the permission flow; steps advance each other. */
-    private void startPermissionStep(int step) {
-        switch (step) {
-            case STEP_RUNTIME_PERMS: {
-                List<String> needed = new ArrayList<>();
-                for (String perm : new String[]{
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.READ_PHONE_STATE}) {
-                    if (ContextCompat.checkSelfPermission(this, perm)
-                            != PackageManager.PERMISSION_GRANTED) {
-                        needed.add(perm);
-                    }
-                }
-                if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this,
-                        "android.permission.POST_NOTIFICATIONS")
-                        != PackageManager.PERMISSION_GRANTED) {
-                    needed.add("android.permission.POST_NOTIFICATIONS");
-                }
-                if (!needed.isEmpty()) {
-                    // Flow continues in onRequestPermissionsResult()
-                    ActivityCompat.requestPermissions(this, needed.toArray(new String[0]),
-                            REQ_RUNTIME_PERMS);
-                    return;
-                }
-                startPermissionStep(STEP_BACKGROUND_LOCATION);
-                break;
-            }
-
-            case STEP_BACKGROUND_LOCATION: {
-                // Android refuses a combined foreground+background location request from API 30 on, this must be its own separate step, asked only after fine location is already granted.
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
-                        || ContextCompat.checkSelfPermission(this,
-                                Manifest.permission.ACCESS_FINE_LOCATION)
-                                != PackageManager.PERMISSION_GRANTED
-                        || ContextCompat.checkSelfPermission(this,
-                                Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                                == PackageManager.PERMISSION_GRANTED) {
-                    startPermissionStep(STEP_EXACT_ALARM);
-                    return;
-                }
-                AlertDialog dialog = new AlertDialog.Builder(this)
-                        .setTitle("Keep working after a restart")
-                        .setMessage("To keep switching profiles right after your phone "
-                                + "restarts — before you've opened the app — Auto "
-                                + "Profiles needs background location access. On the next "
-                                + "screen, choose \"Allow all the time\".")
-                        .setPositiveButton("Continue", (d, which) ->
-                                ActivityCompat.requestPermissions(this,
-                                        new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION},
-                                        REQ_BACKGROUND_LOCATION))
-                        .setNegativeButton("Not now", (d, which) ->
-                                startPermissionStep(STEP_EXACT_ALARM))
-                        .setOnCancelListener(d -> startPermissionStep(STEP_EXACT_ALARM))
-                        .create();
-                dialog.show();
-                break;
-            }
-
-            case STEP_EXACT_ALARM: {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                    startPermissionStep(STEP_BATTERY);
-                    return;
-                }
-                AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-                if (alarmManager == null || alarmManager.canScheduleExactAlarms()) {
-                    startPermissionStep(STEP_BATTERY);
-                    return;
-                }
-                AlertDialog dialog = new AlertDialog.Builder(this)
-                        .setTitle("Permission needed")
-                        .setMessage("Auto Profiles needs the \"Alarms & reminders\" permission "
-                                + "to switch profiles at the exact scheduled time. Without it, "
-                                + "switching may be delayed by several minutes.")
-                        .setPositiveButton("Open Settings", (d, which) -> {
-                            Intent intent = new Intent(
-                                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                                    Uri.parse("package:" + getPackageName()));
-                            startActivity(intent);
-                        })
-                        .setNegativeButton("Later", null)
-                        .create();
-                // Advance on ANY outcome (Settings, Later, back button)
-                dialog.setOnDismissListener(d -> continueAfterDialog(STEP_BATTERY));
-                dialog.show();
-                break;
-            }
-
-            case STEP_BATTERY: {
-                ensureBatteryExemption();
-                break;
-            }
+    private void ensureNotificationPermission(Runnable onDone) {
+        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this,
+                "android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+            pendingPermissionResultAction = onDone;
+            ActivityCompat.requestPermissions(this,
+                    new String[]{"android.permission.POST_NOTIFICATIONS"}, REQ_NOTIFICATIONS);
+            return;
         }
+        if (onDone != null) onDone.run();
     }
 
     /**
-     * Advances the flow after a dialog closes. If the user navigated away
-     * (e.g. to a Settings screen), the next step is deferred to onResume so
-     * its prompt doesn't appear on top of Settings.
+     * Re-asks the GSM / Schedule permission sets for users who already have a matching rule configured, in case a permission was revoked since.
      */
-    private void continueAfterDialog(int nextStep) {
-        if (getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)) {
-            startPermissionStep(nextStep);
-        } else {
-            pendingPermissionStep = nextStep;
+    private void ensurePermissionsForExistingRules() {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            AppDatabase db = AppDatabase.getInstance(this);
+            boolean hasCell = false;
+            boolean hasTime = false;
+            for (FullRule fullRule : db.ruleDao().getAllRulesWithDetails()) {
+                if (fullRule.rule == null || !fullRule.rule.isEnabled() || fullRule.trigger == null) {
+                    continue;
+                }
+                if ("CELL".equals(fullRule.trigger.getType())) hasCell = true;
+                else if ("TIME".equals(fullRule.trigger.getType())) hasTime = true;
+            }
+            boolean finalHasCell = hasCell;
+            boolean finalHasTime = hasTime;
+            runOnUiThread(() -> {
+                if (finalHasCell) {
+                    ensureGsmPermissions(finalHasTime ? () -> ensureSchedulePermissions(null) : null);
+                } else if (finalHasTime) {
+                    ensureSchedulePermissions(null);
+                }
+            });
+        });
+    }
+
+    /**
+     * Requests everything a GSM (cell-tower) rule needs: fine location, phone state, background location (Q+), and the battery-optimization exemption.
+     */
+    private void ensureGsmPermissions(Runnable onDone) {
+        List<String> needed = new ArrayList<>();
+        for (String perm : new String[]{
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.READ_PHONE_STATE}) {
+            if (ContextCompat.checkSelfPermission(this, perm)
+                    != PackageManager.PERMISSION_GRANTED) {
+                needed.add(perm);
+            }
         }
+        if (!needed.isEmpty()) {
+            Toast.makeText(this, "Location permission is needed to scan cell towers",
+                    Toast.LENGTH_LONG).show();
+            pendingPermissionResultAction = () -> continueGsmPermissionsAfterFineLocation(onDone);
+            ActivityCompat.requestPermissions(this, needed.toArray(new String[0]),
+                    REQ_RUNTIME_PERMS);
+            return;
+        }
+        continueGsmPermissionsAfterFineLocation(onDone);
+    }
+
+    private void continueGsmPermissionsAfterFineLocation(Runnable onDone) {
+        boolean fineLocationGranted = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        if (fineLocationGranted) {
+            updateMonitorService(ProfileSwitcher.isMasterEnabled(this));
+        }
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+                || !fineLocationGranted
+                || ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                        == PackageManager.PERMISSION_GRANTED) {
+            ensureBatteryExemption();
+            if (onDone != null) onDone.run();
+            return;
+        }
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Keep working after a restart")
+                .setMessage("To keep switching profiles right after your phone "
+                        + "restarts — before you've opened the app — Auto "
+                        + "Profiles needs background location access. On the next "
+                        + "screen, choose \"Allow all the time\".")
+                .setPositiveButton("Continue", (d, which) -> {
+                    pendingPermissionResultAction = () -> {
+                        ensureBatteryExemption();
+                        if (onDone != null) onDone.run();
+                    };
+                    ActivityCompat.requestPermissions(this,
+                            new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION},
+                            REQ_BACKGROUND_LOCATION);
+                })
+                .setNegativeButton("Not now", (d, which) -> {
+                    ensureBatteryExemption();
+                    if (onDone != null) onDone.run();
+                })
+                .setOnCancelListener(d -> {
+                    ensureBatteryExemption();
+                    if (onDone != null) onDone.run();
+                })
+                .create();
+        dialog.show();
+    }
+
+    /**
+     * Requests the "Alarms & reminders" exact-alarm permission a Schedule rule needs (Android 12+).
+     */
+    private void ensureSchedulePermissions(Runnable onDone) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            if (onDone != null) onDone.run();
+            return;
+        }
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        if (alarmManager == null || alarmManager.canScheduleExactAlarms()) {
+            if (onDone != null) onDone.run();
+            return;
+        }
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Permission needed")
+                .setMessage("Auto Profiles needs the \"Alarms & reminders\" permission "
+                        + "to switch profiles at the exact scheduled time. Without it, "
+                        + "switching may be delayed by several minutes.")
+                .setPositiveButton("Open Settings", (d, which) -> {
+                    Intent intent = new Intent(
+                            Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                            Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                })
+                .setNegativeButton("Later", null)
+                .create();
+        dialog.setOnDismissListener(d -> {
+            if (getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)) {
+                if (onDone != null) onDone.run();
+            } else {
+                pendingResumeAction = onDone;
+            }
+        });
+        dialog.show();
     }
 
     /** Registers alarms for every enabled TIME rule (no-op when the master switch is off). */
@@ -224,34 +252,25 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private static final int REQ_RUNTIME_PERMS = 42;
-    private static final int REQ_BACKGROUND_LOCATION = 43;
-
-    /** Re-entry point used by promptForTriggerType() when location is missing. */
-    private void ensureRuntimePermissions() {
-        startPermissionStep(STEP_RUNTIME_PERMS);
-    }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions,
                                            int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQ_RUNTIME_PERMS) {
             for (int i = 0; i < permissions.length; i++) {
-                if (Manifest.permission.ACCESS_FINE_LOCATION.equals(permissions[i])) {
-                    if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                        updateMonitorService(ProfileSwitcher.isMasterEnabled(this));
-                    } else {
-                        Toast.makeText(this,
-                                "Without location access, GSM location rules will not work.",
-                                Toast.LENGTH_LONG).show();
-                    }
+                if (Manifest.permission.ACCESS_FINE_LOCATION.equals(permissions[i])
+                        && grantResults[i] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this,
+                            "Without location access, GSM location rules will not work.",
+                            Toast.LENGTH_LONG).show();
                 }
             }
-            // Runtime permissions answered - move on to the next prompt
-            startPermissionStep(STEP_BACKGROUND_LOCATION);
-        } else if (requestCode == REQ_BACKGROUND_LOCATION) {
-            startPermissionStep(STEP_EXACT_ALARM);
+        }
+        if (requestCode == REQ_RUNTIME_PERMS || requestCode == REQ_BACKGROUND_LOCATION
+                || requestCode == REQ_NOTIFICATIONS) {
+            Runnable action = pendingPermissionResultAction;
+            pendingPermissionResultAction = null;
+            if (action != null) action.run();
         }
     }
 
@@ -496,19 +515,11 @@ public class MainActivity extends AppCompatActivity {
             .setTitle("Create Rule")
             .setMessage("How should '" + profileName + "' be triggered?")
             .setPositiveButton("Schedule", (dialog, which) ->
-                    resolveProfileIdThen(profileName, ScheduleActivity.class))
-            .setNegativeButton("Location (GSM)", (dialog, which) -> {
-                if (ContextCompat.checkSelfPermission(MainActivity.this,
-                        Manifest.permission.ACCESS_FINE_LOCATION)
-                        != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(MainActivity.this,
-                            "Location permission is needed to scan cell towers",
-                            Toast.LENGTH_LONG).show();
-                    ensureRuntimePermissions();
-                    return;
-                }
-                resolveProfileIdThen(profileName, LocationScanActivity.class);
-            })
+                    ensureSchedulePermissions(() ->
+                            resolveProfileIdThen(profileName, ScheduleActivity.class)))
+            .setNegativeButton("Location (GSM)", (dialog, which) ->
+                    ensureGsmPermissions(() ->
+                            resolveProfileIdThen(profileName, LocationScanActivity.class)))
             .show();
     }
 
