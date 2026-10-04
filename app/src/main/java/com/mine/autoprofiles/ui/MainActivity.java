@@ -45,8 +45,9 @@ public class MainActivity extends AppCompatActivity {
     // Sequential permission flow
 
     private static final int STEP_RUNTIME_PERMS = 0;
-    private static final int STEP_EXACT_ALARM = 1;
-    private static final int STEP_BATTERY = 2;
+    private static final int STEP_BACKGROUND_LOCATION = 1;
+    private static final int STEP_EXACT_ALARM = 2;
+    private static final int STEP_BATTERY = 3;
 
     /** Next step to run in onResume after the user returns from Settings; -1 = none. */
     private int pendingPermissionStep = -1;
@@ -125,7 +126,37 @@ public class MainActivity extends AppCompatActivity {
                             REQ_RUNTIME_PERMS);
                     return;
                 }
-                startPermissionStep(STEP_EXACT_ALARM);
+                startPermissionStep(STEP_BACKGROUND_LOCATION);
+                break;
+            }
+
+            case STEP_BACKGROUND_LOCATION: {
+                // Android refuses a combined foreground+background location request from API 30 on, this must be its own separate step, asked only after fine location is already granted.
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+                        || ContextCompat.checkSelfPermission(this,
+                                Manifest.permission.ACCESS_FINE_LOCATION)
+                                != PackageManager.PERMISSION_GRANTED
+                        || ContextCompat.checkSelfPermission(this,
+                                Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                                == PackageManager.PERMISSION_GRANTED) {
+                    startPermissionStep(STEP_EXACT_ALARM);
+                    return;
+                }
+                AlertDialog dialog = new AlertDialog.Builder(this)
+                        .setTitle("Keep working after a restart")
+                        .setMessage("To keep switching profiles right after your phone "
+                                + "restarts — before you've opened the app — Auto "
+                                + "Profiles needs background location access. On the next "
+                                + "screen, choose \"Allow all the time\".")
+                        .setPositiveButton("Continue", (d, which) ->
+                                ActivityCompat.requestPermissions(this,
+                                        new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION},
+                                        REQ_BACKGROUND_LOCATION))
+                        .setNegativeButton("Not now", (d, which) ->
+                                startPermissionStep(STEP_EXACT_ALARM))
+                        .setOnCancelListener(d -> startPermissionStep(STEP_EXACT_ALARM))
+                        .create();
+                dialog.show();
                 break;
             }
 
@@ -194,6 +225,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private static final int REQ_RUNTIME_PERMS = 42;
+    private static final int REQ_BACKGROUND_LOCATION = 43;
 
     /** Re-entry point used by promptForTriggerType() when location is missing. */
     private void ensureRuntimePermissions() {
@@ -217,6 +249,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             // Runtime permissions answered - move on to the next prompt
+            startPermissionStep(STEP_BACKGROUND_LOCATION);
+        } else if (requestCode == REQ_BACKGROUND_LOCATION) {
             startPermissionStep(STEP_EXACT_ALARM);
         }
     }
