@@ -26,6 +26,7 @@ All rules are listed in the main window, where each one can be edited, deleted, 
 <ul>
   <li>Location (precise): required by Android to read cell tower identities, which are treated as location data. GPS is not used.</li>
   <li>Location (coarse): fallback location data used alongside precise location for cell tower identification.</li>
+  <li>Location (background, Android 10+): lets the cell-monitoring service keep detecting towers right after your phone restarts, before you've had a chance to reopen the app. Asked separately from precise location, and only after it is granted.</li>
   <li>Phone: to read the cellular network state.</li>
   <li>Network state: to access network information.</li>
   <li>Run at startup: to restore rule monitoring and alarms after a reboot.</li>
@@ -33,5 +34,6 @@ All rules are listed in the main window, where each one can be edited, deleted, 
   <li>Foreground service (location): specialized permission to run a foreground service that monitors location-based triggers (Android 14+).</li>
   <li>Alarms & reminders: to switch profiles at the exact scheduled time (Android 12+).</li>
   <li>Notifications: for the persistent monitoring notification (Android 13+).</li>
+  <li>Ignore battery optimizations: exempts the app from Doze so the background monitor isn't throttled while the screen is off. Requested once via a single system dialog. Declining it is safe, but cell changes may then be detected with a delay while the phone is idle.</li>
   <li>Modify profiles (lineageos.permission.MODIFY_PROFILES): to switch LineageOS System Profiles.</li>
 </ul>
