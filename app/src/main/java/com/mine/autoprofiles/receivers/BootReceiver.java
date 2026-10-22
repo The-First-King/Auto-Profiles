@@ -22,14 +22,12 @@ public class BootReceiver extends BroadcastReceiver {
                 return;
             }
 
-            // Restart cell-tower monitoring. From a receiver the app is in the
-            // background, so startForegroundService() is required (API 26+);
-            // BOOT_COMPLETED and MY_PACKAGE_REPLACED are exempt from the
-            // Android 12 background-FGS-launch restrictions.
+            // Restart cell-tower monitoring. BOOT_COMPLETED and MY_PACKAGE_REPLACED
+            // are exempt from the Android 12 background-FGS-launch restrictions.
+            // Skipped until location is granted. The app restarts it on next launch.
             Log.i("AutoProfile", "Starting TriggerMonitorService after: " + action);
             try {
-                context.startForegroundService(
-                        new Intent(context, TriggerMonitorService.class));
+                TriggerMonitorService.startIfPermitted(context);
             } catch (Exception e) {
                 Log.e("AutoProfile", "Failed to start monitor service on boot", e);
             }
