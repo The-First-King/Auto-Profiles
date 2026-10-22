@@ -276,11 +276,10 @@ public class MainActivity extends AppCompatActivity {
 
     /** Starts/stops the foreground monitor (and its status-bar notification). */
     private void updateMonitorService(boolean enabled) {
-        Intent serviceIntent = new Intent(this, TriggerMonitorService.class);
         if (enabled) {
-            startService(serviceIntent);
+            TriggerMonitorService.startIfPermitted(this);
         } else {
-            stopService(serviceIntent);
+            stopService(new Intent(this, TriggerMonitorService.class));
         }
     }
 
@@ -333,7 +332,7 @@ public class MainActivity extends AppCompatActivity {
                             } else if (rule.trigger != null && "CELL".equals(rule.trigger.getType())
                                     && ProfileSwitcher.isMasterEnabled(MainActivity.this)) {
                                 // Re-evaluate immediately: we might be at the location right now
-                                startService(new Intent(MainActivity.this, TriggerMonitorService.class));
+                                TriggerMonitorService.startIfPermitted(MainActivity.this);
                             }
                         } else {
                             AlarmHelper.cancelAlarms(MainActivity.this, rule.rule.getId());
