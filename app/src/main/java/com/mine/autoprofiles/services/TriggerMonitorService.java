@@ -131,6 +131,24 @@ public class TriggerMonitorService extends Service {
         return null;
     }
 
+    /**
+     * Starts the monitor only when fine location is granted. On Android 14+ a
+     * location-type foreground service that starts without it throws
+     * SecurityException from onCreate(), which kills the whole app process.
+     */
+    public static void startIfPermitted(Context context) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        Intent intent = new Intent(context, TriggerMonitorService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent);
+        } else {
+            context.startService(intent);
+        }
+    }
+
     private boolean hasLocationPermission() {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED
